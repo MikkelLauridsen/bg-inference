@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 094199f7b5d0f9b10b90819b2983ae6d2919da089426c1ec837c61adc46f683d
+-- hash: 687a99642db9ae4e3472814a706f470d3be962b49a806dd096fc83a42d85c6b4
 
 name:           bg-inference
 version:        0.1.0.0
@@ -28,12 +28,18 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Types
+      Constraints
   other-modules:
       Paths_bg_inference
   hs-source-dirs:
       src
   build-depends:
-      base >=4.7 && <5
+      base >=4.7 && <5,
+      containers,
+      multiset,
+      mtl,
+      z3
   default-language: Haskell2010
 
 executable bg-inference-exe
