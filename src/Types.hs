@@ -8,9 +8,13 @@ module Types
     TypeVar,
     IOCapability (..),
     Coefficient (..),
+    SimpleTypeSubstitution,
   )
 where
 
+import Data.Map
+import qualified Data.Map as Map
+import Data.Maybe
 import Data.Set
 
 type Index = Int -- TODO change
@@ -27,9 +31,11 @@ type TypeVar = Int
 
 type CoefficientVar = Int
 
+type SimpleTypeSubstitution = Map TypeVar SimpleType
+
 data IOCapability = IOCVar CapabilityVar | IOCIn | IOCOut | IOCInOut
 
-data SimpleType = STVar TypeVar | STNat | STChannel [SimpleType] | STServ [IndexVar] [SimpleType]
+data SimpleType = STVar TypeVar | STNat | STChannel [SimpleType] | STServ [IndexVar] [SimpleType] deriving (Show, Eq)
 
 data Type = TNat Index Index | TChannel [Type] IOCapability Index | TServ Index [IndexVar] [Type] IOCapability Index
 
@@ -44,3 +50,9 @@ unionIO IOCOut IOCIn = IOCInOut
 unionIO IOCIn IOCOut = IOCInOut
 unionIO IOCInOut _ = IOCInOut
 unionIO _ IOCInOut = IOCInOut
+
+substituteSimpleTypes :: SimpleType -> SimpleTypeSubstitution -> SimpleType
+substituteSimpleTypes (STVar v) sub = fromMaybe (STVar v) (Map.lookup v sub)
+substituteSimpleTypes STNat _ = STNat
+substituteSimpleTypes (STChannel ts) sub = STChannel (Prelude.map (`substituteSimpleTypes` sub) ts)
+substituteSimpleTypes (STServ i ts) sub = STServ i (Prelude.map (`substituteSimpleTypes` sub) ts)

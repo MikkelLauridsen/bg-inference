@@ -1,21 +1,28 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Inference () where
+module Inference
+  ( inferSimpleTypes,
+  )
+where
 
+import qualified ConstraintSolving as CS
 import qualified Constraints as C
+import qualified Control.Arrow as Data.Bifunctor
 import Control.Exception
 import Control.Monad.Except
 import Control.Monad.State.Lazy
 import qualified Data.Map as Map
+import Data.Maybe
 import PiCalculus
 import Types
+import Debug.Trace
 
 data InferState = InferState
   { tvarCount :: Int,
     ivarCount :: Int,
     stack :: [(String, [(String, String)])],
     constraints :: [C.Constraint],
-    simpleTypeContext :: Map.Map Var SimpleType,
+    simpleTypeContext :: Map.Map Var SimpleType, -- Maps
     ivarsPerServer :: Int
   }
 
@@ -24,10 +31,57 @@ type Infer a = StateT InferState (Either (InferState, String)) a
 instance MonadFail (Either (InferState, String)) where
   fail s = Left (InferState 0 0 [] [] Map.empty 0, s)
 
+runInfer :: Int -> Infer a -> Either String a
+runInfer ivarsPersServer m = case evalStateT m (InferState 0 0 [] [] Map.empty ivarsPersServer) of
+  Left (InferState _ _ s _ _ _, msg) ->
+    Left $
+      "Error during process check: " ++ msg ++ "\n"
+        ++ "StackTrace: "
+        ++ show (Prelude.map fst s)
+        ++ "\n"
+        ++ "Relevant bindings: "
+        ++ (if not (Prelude.null s) then (showBindings . snd . head) s else "Invalid")
+        ++ "Relevant bindings 2: "
+        ++ (if Prelude.length s >= 2 then (showBindings . snd . head . tail) s else "Invalid")
+        ++ "Relevant bindings 3: "
+        ++ (if Prelude.length s >= 3 then (showBindings . snd . head . tail . tail) s else "Invalid")
+  Right k -> Right k
+  where
+    showBindings bindings = "\n" ++ Prelude.foldr (\(var, t) acc -> "  " ++ var ++ " : " ++ t ++ "\n" ++ acc) "" bindings
+
+inferSimpleTypes :: Int -> Proc -> Either String SimpleTypeSubstitution
+inferSimpleTypes ivarsPerServer p =
+  runInfer ivarsPerServer $ do
+    updateTvarCount p
+    inferSimpleConstraintTypes p
+    solveSimpleTypeConstraints
+
+solveSimpleTypeConstraints :: Infer SimpleTypeSubstitution
+solveSimpleTypeConstraints = do
+  s <- get
+  let c = constraints s
+  let simpleConstraints =
+        mapMaybe
+          ( \c -> case c of
+              C.CSSimple c' -> Just c'
+              _ -> Nothing
+          )
+          c
+  case CS.solveSimpleTypeConstraints simpleConstraints of
+    Left s -> fail $ "Could not solve simple type constraints: " ++ s
+    Right subst -> return subst
+
 returnError :: String -> Infer a
 returnError msg = do
   s <- get
   throwError (s, msg)
+
+inContext :: String -> [(String, String)] -> Infer a -> Infer a
+inContext name bindings action = do
+  modify $ \st -> st {stack = (name, Prelude.map (Data.Bifunctor.second show) bindings) : stack st}
+  res <- action
+  modify $ \st -> st {stack = tail $ stack st}
+  return res
 
 freshTvar :: Infer TypeVar
 freshTvar = do
@@ -43,39 +97,40 @@ freshIvar = do
 
 freshServerIvars :: Infer [IndexVar]
 freshServerIvars = do
-  count <- gets ivarsPerServer
+  count <- gets ivarCount
+  num <- gets ivarsPerServer
   modify $ \s -> s {ivarCount = count + 1}
-  return [count .. count + count - 1]
+  return [count .. count + num - 1]
 
 lookupSimpleType :: Var -> Infer SimpleType
 lookupSimpleType v = do
   ctx <- gets simpleTypeContext
   case Map.lookup v ctx of
     Just t -> return t
-    Nothing -> returnError "error: variable not in context"
+    Nothing -> returnError $ "Error: variable " ++ show v ++ " not found in simple type context"
 
 updateSimpleType :: Var -> SimpleType -> Infer ()
 updateSimpleType v t = modify $ \s -> s {simpleTypeContext = Map.insert v t (simpleTypeContext s)}
 
 maxTvarTyp :: SimpleType -> TypeVar
 maxTvarTyp (STVar v) = v
-maxTvarTyp STNat = 0
+maxTvarTyp STNat = -1
 maxTvarTyp (STChannel ts) = maximum $ map maxTvarTyp ts
 maxTvarTyp (STServ _ ts) = maximum $ map maxTvarTyp ts
 
 maxTvar :: Proc -> TypeVar
-maxTvar NilP = 0
+maxTvar NilP = -1
 maxTvar (TickP p) = maxTvar p
 maxTvar (p1 :|: p2) = max (maxTvar p1) (maxTvar p2)
 maxTvar (InputP _ _ p) = maxTvar p
-maxTvar (OutputP _ _) = 0
+maxTvar (OutputP _ _) = -1
 maxTvar (RepInputP _ _ p) = maxTvar p
 maxTvar (RestrictP _ t p) = max (maxTvar p) (maxTvarTyp t)
 maxTvar (MatchNatP _ p1 _ p2) = max (maxTvar p1) (maxTvar p2)
 
 updateTvarCount :: Proc -> Infer ()
 updateTvarCount p =
-  let count = maxTvar p
+  let count = maxTvar p + 1
    in modify $ \s -> s {tvarCount = count}
 
 assertConstraint :: C.Constraint -> Infer ()
@@ -86,22 +141,21 @@ assertConstraint c = do
 -- TODO ensure all variables are unique
 
 inferExpSimpleType :: Exp -> Infer SimpleType
-inferExpSimpleType ZeroE = return STNat
-inferExpSimpleType (SuccE e) = do
+inferExpSimpleType ZeroE = inContext "ZeroE" [] $ return STNat
+inferExpSimpleType (SuccE e) = inContext "SuccE" [] $ do
   t <- inferExpSimpleType e
   case t of
     STNat -> return STNat
     _ -> returnError "error: succ of non-nat"
-inferExpSimpleType (VarE v) = lookupSimpleType v
-
+inferExpSimpleType (VarE v) = inContext "VarE" [] $ lookupSimpleType v
 
 inferSimpleConstraintTypes :: Proc -> Infer ()
 inferSimpleConstraintTypes NilP = return ()
-inferSimpleConstraintTypes (TickP p) = inferSimpleConstraintTypes p
-inferSimpleConstraintTypes (p1 :|: p2) = do
+inferSimpleConstraintTypes (TickP p) = inContext "TickP" [] $ inferSimpleConstraintTypes p
+inferSimpleConstraintTypes (p1 :|: p2) = inContext "ParP" [("p1", show p1), ("p2", show p2)] $ do
   inferSimpleConstraintTypes p1
   inferSimpleConstraintTypes p2
-inferSimpleConstraintTypes (InputP v vs p) = do
+inferSimpleConstraintTypes (InputP v vs p) = inContext "InputP" [] $ do
   t <- lookupSimpleType v
   ts <- forM vs $ \v -> do
     t <- freshTvar
@@ -109,11 +163,11 @@ inferSimpleConstraintTypes (InputP v vs p) = do
     return t
   assertConstraint $ C.CSSimple $ C.STCSEqual t (STChannel (map STVar ts))
   inferSimpleConstraintTypes p
-inferSimpleConstraintTypes (OutputP v es) = do
+inferSimpleConstraintTypes (OutputP v es) = inContext "OutputP" [] $ do
   t <- lookupSimpleType v
   ts <- mapM inferExpSimpleType es
   assertConstraint $ C.CSSimple $ C.STCSChannelServer t ts
-inferSimpleConstraintTypes (RepInputP v vs p) = do
+inferSimpleConstraintTypes (RepInputP v vs p) = inContext "RepInputP" [] $ do
   t <- lookupSimpleType v
   ts <- forM vs $ \v -> do
     t <- freshTvar
@@ -122,12 +176,14 @@ inferSimpleConstraintTypes (RepInputP v vs p) = do
   ixs <- freshServerIvars
   assertConstraint $ C.CSSimple $ C.STCSEqual t (STServ ixs (map STVar ts))
   inferSimpleConstraintTypes p
-inferSimpleConstraintTypes (RestrictP v t p) = updateSimpleType v t >> inferSimpleConstraintTypes p
-inferSimpleConstraintTypes (MatchNatP e p1 v p2) = do
+inferSimpleConstraintTypes (RestrictP v t p) = inContext "RestrictP" [] $ do
+  updateSimpleType v t
+  inferSimpleConstraintTypes p
+inferSimpleConstraintTypes (MatchNatP e p1 v p2) = inContext "MatchNatP" [] $ do
   t <- inferExpSimpleType e
   assertConstraint $ C.CSSimple $ C.STCSEqual t STNat
   ntv <- freshTvar
   assertConstraint $ C.CSSimple $ C.STCSEqual (STVar ntv) STNat
   inferSimpleConstraintTypes p1
+  updateSimpleType v (STVar ntv)
   inferSimpleConstraintTypes p2
-
