@@ -14,6 +14,7 @@ import Control.Monad.State.Lazy
 import qualified Data.Map as Map
 import Data.Maybe
 import Debug.Trace
+import Index
 import PiCalculus
 import Types
 
@@ -24,7 +25,7 @@ data InferState = InferState
     simpleTypeConstraints :: [C.SimpleTypeConstraint],
     typeConstraints :: [C.TypeConstraint],
     useConstraints :: [C.UseConstraint],
-    coefficientConstraints :: [C.CoefficientConstraint],
+    indexConstraints :: [C.IndexConstraint],
     useCapabilityConstraints :: [C.UseCapabilityConstraint],
     simpleTypeContext :: Map.Map Var SimpleType, -- Maps
     ivarsPerServer :: Int
@@ -148,10 +149,10 @@ assertUseConstraint c = do
   s <- get
   put $ s {useConstraints = c : useConstraints s}
 
-assertCoefficientConstraint :: C.CoefficientConstraint -> Infer ()
-assertCoefficientConstraint c = do
+assertIndexConstraint :: C.IndexConstraint -> Infer ()
+assertIndexConstraint c = do
   s <- get
-  put $ s {coefficientConstraints = c : coefficientConstraints s}
+  put $ s {indexConstraints = c : indexConstraints s}
 
 assertUseCapabilityConstraint :: C.UseCapabilityConstraint -> Infer ()
 assertUseCapabilityConstraint c = do

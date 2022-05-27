@@ -28,6 +28,7 @@ source-repository head
 library
   exposed-modules:
       Lib
+      Index
       Types
       Constraints
       ConstraintSolving

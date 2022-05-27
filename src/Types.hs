@@ -2,12 +2,10 @@ module Types
   ( SimpleType (..),
     Type (..),
     Index,
-    IndexConstraintEnv,
     CapabilityVar,
     IndexVar,
     TypeVar,
     UseCapability (..),
-    Coefficient (..),
     SimpleTypeSubstitution,
   )
 where
@@ -16,20 +14,11 @@ import Data.Map
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Set
-
-type Index = Int -- TODO change
-
-type IndexConstraint = (Index, Index) -- TODO change
-
-type IndexConstraintEnv = (Set IndexVar, Set IndexConstraint)
+import Index
 
 type CapabilityVar = Int
 
-type IndexVar = Int
-
 type TypeVar = Int
-
-type CoefficientVar = Int
 
 type SimpleTypeSubstitution = Map TypeVar SimpleType
 
@@ -38,8 +27,6 @@ data UseCapability = UCVar CapabilityVar | UCIn | UCOut | UCInOut
 data SimpleType = STVar TypeVar | STNat | STChannel [SimpleType] | STServ [IndexVar] [SimpleType] deriving (Show, Eq)
 
 data Type = TNat Index Index | TChannel [Type] UseCapability Index | TServ Index [IndexVar] [Type] UseCapability Index
-
-data Coefficient = COEVar CoefficientVar | COENumeral Double | COEAdd Coefficient Coefficient | COEMul Coefficient Coefficient
 
 unionUCapability :: UseCapability -> UseCapability -> UseCapability
 unionUCapability (UCVar _) _ = error "unionIO: impossible"

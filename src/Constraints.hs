@@ -1,13 +1,13 @@
 module Constraints
-  ( 
-    SimpleTypeConstraint (..),
+  ( SimpleTypeConstraint (..),
     TypeConstraint (..),
     UseConstraint (..),
-    CoefficientConstraint (..),
+    IndexConstraint (..),
     UseCapabilityConstraint (..),
   )
 where
 
+import Index
 import Types
 
 data SimpleTypeConstraint -- c_b, STSC = Simple Type Constraint
@@ -16,20 +16,19 @@ data SimpleTypeConstraint -- c_b, STSC = Simple Type Constraint
 
 data TypeConstraint -- c_T, TCS = Type constraint
   = TCSEqual Type Type
-  | TCSEqualIndex Index Index
-  | TCSInvariant IndexConstraintEnv Type
-  | TCSConditionalSubsumption IndexConstraintEnv Type Type
+  | TCSInvariant IndexTypeConstraintEnv Type
+  | TCSConditionalSubsumption IndexTypeConstraintEnv Type Type
   | TCSUse UseConstraint
 
 data UseConstraint --c_IO, USC = Use constraint
-  = UCSConditionalInequality [UseCapabilityConstraint] IndexConstraintEnv Index Index
+  = UCSConditionalInequality [UseCapabilityConstraint] IndexTypeConstraintEnv Index Index
   | USCConditional [UseCapabilityConstraint] UseCapabilityConstraint
-  | USCCoefficient CoefficientConstraint
+  | USCCoefficient IndexConstraint
 
-data CoefficientConstraint -- c_a, CCS = Coefficient constraint
-  = CCSEqual Coefficient Coefficient
-  | CCSLessEq IndexConstraintEnv Index Index
-  | CCSFalse
+data IndexConstraint -- c_I, ICS = Coefficient constraint
+  = ICSIndexEqual Index Index
+  | ICSLessEq IndexTypeConstraintEnv Index Index
+  | ICSFalse
 
 data UseCapabilityConstraint -- c_gamma, UCCS = Use capability constraint
   = UCCSSubset UseCapability UseCapability
