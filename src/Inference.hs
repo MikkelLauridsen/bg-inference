@@ -33,12 +33,13 @@ data InferState = InferState
 type Infer a = StateT InferState (Either (InferState, String)) a
 
 instance MonadFail (Either (InferState, String)) where
-  fail s = Left (defaultState, s)
+  fail s = Left (defaultState 0, s)
 
-defaultState = InferState 0 0 [] [] [] [] [] [] Map.empty 0
+defaultState :: Int -> InferState
+defaultState = InferState 0 0 [] [] [] [] [] [] Map.empty
 
 runInfer :: Int -> Infer a -> Either String a
-runInfer ivarsPersServer m = case evalStateT m defaultState of
+runInfer ivarsPerServer m = case evalStateT m (defaultState ivarsPerServer) of
   Left (InferState _ _ s _ _ _ _ _ _ _, msg) ->
     Left $
       "Error during process check: " ++ msg ++ "\n"
