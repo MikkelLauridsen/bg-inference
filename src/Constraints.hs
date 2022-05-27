@@ -13,7 +13,6 @@ import Types
 data SimpleTypeConstraint -- c_b, STSC = Simple Type Constraint
   = STCSEqual SimpleType SimpleType
   | STCSChannelServer SimpleType [SimpleType]
-  | STCSFalse
 
 data TypeConstraint -- c_T, TCS = Type constraint
   = TCSEqual Type Type

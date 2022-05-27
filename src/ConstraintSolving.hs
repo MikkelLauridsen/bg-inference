@@ -13,7 +13,7 @@ import Types
 -- Simple types enriched with a type that may be eihter a channel or a server
 data SimpleTypeEnriched = STEVar TypeVar | STENat | STEChannel [SimpleTypeEnriched] | STEServ [IndexVar] [SimpleTypeEnriched] | STEChannelOrServ [SimpleTypeEnriched] deriving (Show)
 
-data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched | STECSFalse
+data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched
 
 solveSimpleTypeConstraints :: [SimpleTypeConstraint] -> Either String SimpleTypeSubstitution
 solveSimpleTypeConstraints constraints = do
@@ -39,7 +39,6 @@ unliftSTEType (STEChannelOrServ ts) = STChannel (Prelude.map unliftSTEType ts)
 liftSTConstraint :: SimpleTypeConstraint -> SimpleTypeEnrichedConstraint
 liftSTConstraint (STCSEqual t1 t2) = STECSEqual (liftSTType t1) (liftSTType t2)
 liftSTConstraint (STCSChannelServer t ts) = STECSEqual (liftSTType t) (STEChannelOrServ (Prelude.map liftSTType ts))
-liftSTConstraint STCSFalse = STECSFalse
 
 fromListFailable :: Ord k => (a -> a -> Either String a) -> [(k, a)] -> Either String (Map.Map k a)
 fromListFailable _ [] = return Map.empty
