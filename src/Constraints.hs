@@ -1,40 +1,36 @@
 module Constraints
-  ( Constraint (..),
+  ( 
     SimpleTypeConstraint (..),
-    IOCapabilityConstraint (..),
     TypeConstraint (..),
-    IndexConstraint (..),
+    UseConstraint (..),
     CoefficientConstraint (..),
+    UseCapabilityConstraint (..),
   )
 where
 
 import Types
 
-data Constraint
-  = CSSimple SimpleTypeConstraint
-  | CSCapability IOCapabilityConstraint
-  | CSType TypeConstraint
-  | CSIndex IndexConstraint
-  | CSCoefficient CoefficientConstraint
-  | CSFalse
-
-data SimpleTypeConstraint
+data SimpleTypeConstraint -- c_b, STSC = Simple Type Constraint
   = STCSEqual SimpleType SimpleType
   | STCSChannelServer SimpleType [SimpleType]
+  | STCSFalse
 
-data IOCapabilityConstraint
-  = IOSCEqual IOCapability IOCapability
-  | IOCSSubset IOCapability IOCapability
-
-data TypeConstraint
+data TypeConstraint -- c_T, TCS = Type constraint
   = TCSEqual Type Type
+  | TCSEqualIndex Index Index
   | TCSInvariant IndexConstraintEnv Type
-  | TCSSubtype IndexConstraintEnv Type Type
+  | TCSConditionalSubsumption IndexConstraintEnv Type Type
+  | TCSUse UseConstraint
 
-data IndexConstraint
-  = ICSEqual Index Index
-  | ICSLessEq IndexConstraintEnv Index Index
+data UseConstraint --c_IO, USC = Use constraint
+  = UCSConditionalInequality [UseCapabilityConstraint] IndexConstraintEnv Index Index
+  | USCConditional [UseCapabilityConstraint] UseCapabilityConstraint
+  | USCCoefficient CoefficientConstraint
 
-data CoefficientConstraint
+data CoefficientConstraint -- c_a, CCS = Coefficient constraint
   = CCSEqual Coefficient Coefficient
-  | CCSLessEq IndexConstraintEnv Coefficient Coefficient
+  | CCSLessEq IndexConstraintEnv Index Index
+  | CCSFalse
+
+data UseCapabilityConstraint -- c_gamma, UCCS = Use capability constraint
+  = UCCSSubset UseCapability UseCapability

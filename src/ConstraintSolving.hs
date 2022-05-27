@@ -8,20 +8,19 @@ import Control.Monad
 import qualified Control.Monad
 import Data.Map as Map
 import qualified Data.Maybe
-import Debug.Trace
 import Types
 
 -- Simple types enriched with a type that may be eihter a channel or a server
 data SimpleTypeEnriched = STEVar TypeVar | STENat | STEChannel [SimpleTypeEnriched] | STEServ [IndexVar] [SimpleTypeEnriched] | STEChannelOrServ [SimpleTypeEnriched] deriving (Show)
 
-type SimpleTypeEnrichedConstraint = (SimpleTypeEnriched, SimpleTypeEnriched)
+data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched | STECSFalse
 
 solveSimpleTypeConstraints :: [SimpleTypeConstraint] -> Either String SimpleTypeSubstitution
 solveSimpleTypeConstraints constraints = do
   let constraints' = Prelude.map liftSTConstraint constraints
   subPairs <- getSubstitutions constraints'
-  subs <- trace (show subPairs) fromListFailable combineSimpleTypes subPairs
-  let subs' = trace (show subs) refineSubstitutions subs
+  subs <- fromListFailable combineSimpleTypes subPairs
+  let subs' = refineSubstitutions subs
   return $ Map.map unliftSTEType subs'
 
 liftSTType :: SimpleType -> SimpleTypeEnriched
@@ -38,8 +37,9 @@ unliftSTEType (STEServ ts is) = STServ ts (Prelude.map unliftSTEType is)
 unliftSTEType (STEChannelOrServ ts) = STChannel (Prelude.map unliftSTEType ts)
 
 liftSTConstraint :: SimpleTypeConstraint -> SimpleTypeEnrichedConstraint
-liftSTConstraint (STCSEqual t1 t2) = (liftSTType t1, liftSTType t2)
-liftSTConstraint (STCSChannelServer t ts) = (liftSTType t, STEChannelOrServ (Prelude.map liftSTType ts))
+liftSTConstraint (STCSEqual t1 t2) = STECSEqual (liftSTType t1) (liftSTType t2)
+liftSTConstraint (STCSChannelServer t ts) = STECSEqual (liftSTType t) (STEChannelOrServ (Prelude.map liftSTType ts))
+liftSTConstraint STCSFalse = STECSFalse
 
 fromListFailable :: Ord k => (a -> a -> Either String a) -> [(k, a)] -> Either String (Map.Map k a)
 fromListFailable _ [] = return Map.empty
@@ -51,17 +51,17 @@ fromListFailable f ((k, v) : rest) = do
 
 getSubstitutions :: [SimpleTypeEnrichedConstraint] -> Either String [(TypeVar, SimpleTypeEnriched)]
 getSubstitutions [] = return []
-getSubstitutions ((STEVar v, t2) : r) = do
+getSubstitutions (STECSEqual (STEVar v) t2 : r) = do
   s <- getSubstitutions r
   return ((v, t2) : s)
-getSubstitutions ((t1, STEVar v) : r) = do
+getSubstitutions (STECSEqual t1 (STEVar v) : r) = do
   s <- getSubstitutions r
   return ((v, t1) : s)
-getSubstitutions ((STENat, STENat) : r) = getSubstitutions r
-getSubstitutions ((STEChannel t1s, STEChannel t2s) : r) = getSubstitutions (r ++ zip t1s t2s)
-getSubstitutions ((STEServ i1s t1s, STEServ i2s t2s) : r) =
+getSubstitutions (STECSEqual STENat STENat : r) = getSubstitutions r
+getSubstitutions (STECSEqual (STEChannel t1s) (STEChannel t2s) : r) = getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
+getSubstitutions (STECSEqual (STEServ i1s t1s) (STEServ i2s t2s) : r) =
   if i1s == i2s
-    then getSubstitutions (r ++ zip t1s t2s)
+    then getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
     else Left "Non-matching index variables"
 getSubstitutions (a : r) = Left "Cannot get substitution"
 

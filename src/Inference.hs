@@ -13,15 +13,19 @@ import Control.Monad.Except
 import Control.Monad.State.Lazy
 import qualified Data.Map as Map
 import Data.Maybe
+import Debug.Trace
 import PiCalculus
 import Types
-import Debug.Trace
 
 data InferState = InferState
   { tvarCount :: Int,
     ivarCount :: Int,
     stack :: [(String, [(String, String)])],
-    constraints :: [C.Constraint],
+    simpleTypeConstraints :: [C.SimpleTypeConstraint],
+    typeConstraints :: [C.TypeConstraint],
+    useConstraints :: [C.UseConstraint],
+    coefficientConstraints :: [C.CoefficientConstraint],
+    useCapabilityConstraints :: [C.UseCapabilityConstraint],
     simpleTypeContext :: Map.Map Var SimpleType, -- Maps
     ivarsPerServer :: Int
   }
@@ -29,11 +33,13 @@ data InferState = InferState
 type Infer a = StateT InferState (Either (InferState, String)) a
 
 instance MonadFail (Either (InferState, String)) where
-  fail s = Left (InferState 0 0 [] [] Map.empty 0, s)
+  fail s = Left (defaultState, s)
+
+defaultState = InferState 0 0 [] [] [] [] [] [] Map.empty 0
 
 runInfer :: Int -> Infer a -> Either String a
-runInfer ivarsPersServer m = case evalStateT m (InferState 0 0 [] [] Map.empty ivarsPersServer) of
-  Left (InferState _ _ s _ _ _, msg) ->
+runInfer ivarsPersServer m = case evalStateT m defaultState of
+  Left (InferState _ _ s _ _ _ _ _ _ _, msg) ->
     Left $
       "Error during process check: " ++ msg ++ "\n"
         ++ "StackTrace: "
@@ -59,14 +65,7 @@ inferSimpleTypes ivarsPerServer p =
 solveSimpleTypeConstraints :: Infer SimpleTypeSubstitution
 solveSimpleTypeConstraints = do
   s <- get
-  let c = constraints s
-  let simpleConstraints =
-        mapMaybe
-          ( \c -> case c of
-              C.CSSimple c' -> Just c'
-              _ -> Nothing
-          )
-          c
+  let simpleConstraints = simpleTypeConstraints s
   case CS.solveSimpleTypeConstraints simpleConstraints of
     Left s -> fail $ "Could not solve simple type constraints: " ++ s
     Right subst -> return subst
@@ -133,12 +132,32 @@ updateTvarCount p =
   let count = maxTvar p + 1
    in modify $ \s -> s {tvarCount = count}
 
-assertConstraint :: C.Constraint -> Infer ()
-assertConstraint c = do
+assertSimpleTypeConstraint :: C.SimpleTypeConstraint -> Infer ()
+assertSimpleTypeConstraint c = do
   s <- get
-  put $ s {constraints = c : constraints s}
+  put $ s {simpleTypeConstraints = c : simpleTypeConstraints s}
 
--- TODO ensure all variables are unique
+assertTypeConstraint :: C.TypeConstraint -> Infer ()
+assertTypeConstraint c = do
+  s <- get
+  put $ s {typeConstraints = c : typeConstraints s}
+
+assertUseConstraint :: C.UseConstraint -> Infer ()
+assertUseConstraint c = do
+  s <- get
+  put $ s {useConstraints = c : useConstraints s}
+
+assertCoefficientConstraint :: C.CoefficientConstraint -> Infer ()
+assertCoefficientConstraint c = do
+  s <- get
+  put $ s {coefficientConstraints = c : coefficientConstraints s}
+
+assertUseCapabilityConstraint :: C.UseCapabilityConstraint -> Infer ()
+assertUseCapabilityConstraint c = do
+  s <- get
+  put $ s {useCapabilityConstraints = c : useCapabilityConstraints s}
+
+-- TODO it is assumed all variable names are unique
 
 inferExpSimpleType :: Exp -> Infer SimpleType
 inferExpSimpleType ZeroE = inContext "ZeroE" [] $ return STNat
@@ -161,12 +180,12 @@ inferSimpleConstraintTypes (InputP v vs p) = inContext "InputP" [] $ do
     t <- freshTvar
     updateSimpleType v (STVar t)
     return t
-  assertConstraint $ C.CSSimple $ C.STCSEqual t (STChannel (map STVar ts))
+  assertSimpleTypeConstraint $ C.STCSEqual t (STChannel (map STVar ts))
   inferSimpleConstraintTypes p
 inferSimpleConstraintTypes (OutputP v es) = inContext "OutputP" [] $ do
   t <- lookupSimpleType v
   ts <- mapM inferExpSimpleType es
-  assertConstraint $ C.CSSimple $ C.STCSChannelServer t ts
+  assertSimpleTypeConstraint $ C.STCSChannelServer t ts
 inferSimpleConstraintTypes (RepInputP v vs p) = inContext "RepInputP" [] $ do
   t <- lookupSimpleType v
   ts <- forM vs $ \v -> do
@@ -174,16 +193,16 @@ inferSimpleConstraintTypes (RepInputP v vs p) = inContext "RepInputP" [] $ do
     updateSimpleType v (STVar t)
     return t
   ixs <- freshServerIvars
-  assertConstraint $ C.CSSimple $ C.STCSEqual t (STServ ixs (map STVar ts))
+  assertSimpleTypeConstraint $ C.STCSEqual t (STServ ixs (map STVar ts))
   inferSimpleConstraintTypes p
 inferSimpleConstraintTypes (RestrictP v t p) = inContext "RestrictP" [] $ do
   updateSimpleType v t
   inferSimpleConstraintTypes p
 inferSimpleConstraintTypes (MatchNatP e p1 v p2) = inContext "MatchNatP" [] $ do
   t <- inferExpSimpleType e
-  assertConstraint $ C.CSSimple $ C.STCSEqual t STNat
+  assertSimpleTypeConstraint $ C.STCSEqual t STNat
   ntv <- freshTvar
-  assertConstraint $ C.CSSimple $ C.STCSEqual (STVar ntv) STNat
+  assertSimpleTypeConstraint $ C.STCSEqual (STVar ntv) STNat
   inferSimpleConstraintTypes p1
   updateSimpleType v (STVar ntv)
   inferSimpleConstraintTypes p2

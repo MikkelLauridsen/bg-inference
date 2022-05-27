@@ -6,7 +6,7 @@ module Types
     CapabilityVar,
     IndexVar,
     TypeVar,
-    IOCapability (..),
+    UseCapability (..),
     Coefficient (..),
     SimpleTypeSubstitution,
   )
@@ -33,23 +33,23 @@ type CoefficientVar = Int
 
 type SimpleTypeSubstitution = Map TypeVar SimpleType
 
-data IOCapability = IOCVar CapabilityVar | IOCIn | IOCOut | IOCInOut
+data UseCapability = UCVar CapabilityVar | UCIn | UCOut | UCInOut
 
 data SimpleType = STVar TypeVar | STNat | STChannel [SimpleType] | STServ [IndexVar] [SimpleType] deriving (Show, Eq)
 
-data Type = TNat Index Index | TChannel [Type] IOCapability Index | TServ Index [IndexVar] [Type] IOCapability Index
+data Type = TNat Index Index | TChannel [Type] UseCapability Index | TServ Index [IndexVar] [Type] UseCapability Index
 
 data Coefficient = COEVar CoefficientVar | COENumeral Double | COEAdd Coefficient Coefficient | COEMul Coefficient Coefficient
 
-unionIO :: IOCapability -> IOCapability -> IOCapability
-unionIO (IOCVar _) _ = error "unionIO: impossible"
-unionIO _ (IOCVar _) = error "unionIO: impossible"
-unionIO IOCIn IOCIn = IOCIn
-unionIO IOCOut IOCOut = IOCOut
-unionIO IOCOut IOCIn = IOCInOut
-unionIO IOCIn IOCOut = IOCInOut
-unionIO IOCInOut _ = IOCInOut
-unionIO _ IOCInOut = IOCInOut
+unionUCapability :: UseCapability -> UseCapability -> UseCapability
+unionUCapability (UCVar _) _ = error "unionIO: impossible"
+unionUCapability _ (UCVar _) = error "unionIO: impossible"
+unionUCapability UCIn UCIn = UCIn
+unionUCapability UCOut UCOut = UCOut
+unionUCapability UCOut UCIn = UCInOut
+unionUCapability UCIn UCOut = UCInOut
+unionUCapability UCInOut _ = UCInOut
+unionUCapability _ UCInOut = UCInOut
 
 substituteSimpleTypes :: SimpleType -> SimpleTypeSubstitution -> SimpleType
 substituteSimpleTypes (STVar v) sub = fromMaybe (STVar v) (Map.lookup v sub)
