@@ -94,14 +94,14 @@ freshIvar :: Infer IndexVar
 freshIvar = do
   count <- gets ivarCount
   modify $ \s -> s {ivarCount = count + 1}
-  return count
+  return $ IndexVar count
 
 freshServerIvars :: Infer [IndexVar]
 freshServerIvars = do
   count <- gets ivarCount
   num <- gets ivarsPerServer
   modify $ \s -> s {ivarCount = count + 1}
-  return [count .. count + num - 1]
+  return $ Prelude.map IndexVar [count .. count + num - 1]
 
 lookupSimpleType :: Var -> Infer SimpleType
 lookupSimpleType v = do

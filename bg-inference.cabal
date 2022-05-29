@@ -34,6 +34,8 @@ library
       ConstraintSolving
       Inference
       PiCalculus
+      Free
+      ConstraintReduction
   other-modules:
       Paths_bg_inference
   hs-source-dirs:
