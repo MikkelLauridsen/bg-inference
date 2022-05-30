@@ -5,6 +5,7 @@ module Index
     Index,
     IndexVarConstraint (..),
     IndexVarConstraintEnv,
+    (.+)
   )
 where
 
@@ -37,3 +38,7 @@ instance Show CoeffVar where
 instance Show IndexVar where
 
   show (IndexVar n) = 'i' : show n
+
+
+(.+) :: Index -> Index -> Index
+(.+) (m, c) (m', c') = (Map.unionWith COEAdd m m', COEAdd c c')

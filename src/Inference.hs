@@ -12,6 +12,7 @@ import Control.Exception
 import Control.Monad.Except
 import Control.Monad.State.Lazy
 import qualified Data.Map as Map
+import Data.Set as Set (Set, fromList)
 import Data.Maybe
 import Debug.Trace
 import Index
@@ -96,12 +97,12 @@ freshIvar = do
   modify $ \s -> s {ivarCount = count + 1}
   return $ IndexVar count
 
-freshServerIvars :: Infer [IndexVar]
+freshServerIvars :: Infer (Set IndexVar)
 freshServerIvars = do
   count <- gets ivarCount
   num <- gets ivarsPerServer
   modify $ \s -> s {ivarCount = count + 1}
-  return $ Prelude.map IndexVar [count .. count + num - 1]
+  return $ Set.fromList (Prelude.map IndexVar [count .. count + num - 1])
 
 lookupSimpleType :: Var -> Infer SimpleType
 lookupSimpleType v = do
@@ -208,3 +209,5 @@ inferSimpleConstraintTypes (MatchNatP e p1 v p2) = inContext "MatchNatP" [] $ do
   inferSimpleConstraintTypes p1
   updateSimpleType v (STVar ntv)
   inferSimpleConstraintTypes p2
+
+

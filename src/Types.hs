@@ -27,7 +27,11 @@ data UseCapabilityType = UCIn | UCOut deriving (Eq, Ord)
 
 data UseCapability = UCVar CapabVar | UCSet (Set UseCapabilityType) deriving (Eq, Ord)
 
-data SimpleType = STVar TypeVar | STNat | STChannel [SimpleType] | STServ [IndexVar] [SimpleType] deriving (Show, Eq)
+data SimpleType 
+  = STVar TypeVar 
+  | STNat 
+  | STChannel [SimpleType] 
+  | STServ (Set IndexVar) [SimpleType] deriving (Show, Eq)
 
 data Type 
   = TNat Index Index 
