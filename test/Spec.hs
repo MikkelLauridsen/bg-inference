@@ -1,4 +1,4 @@
-import Constraints (IndexConstraint (ICSIndexEqual))
+import Constraints
 import Data.Map as Map
 import Index
 import IndexConstraintSolving
@@ -6,13 +6,14 @@ import Inference
 import PiCalculus
 import Test.Hspec
 import Types
+import qualified Data.Set as Set
 
 inferenceSpec = describe "Inference" $ do
   it "should infer simple types of running example" $ do
     inferSimpleTypes 1 inferenceRunningExample
       `shouldBe` Right
         ( Map.fromList
-            [ (b1, STServ [0] [STNat, STChannel []]),
+            [ (b1, STServ (Set.singleton (IndexVar 0)) [STNat, STChannel []]),
               (b2, STChannel []),
               (b3, STChannel []),
               (b4, STChannel []),
@@ -22,9 +23,9 @@ inferenceSpec = describe "Inference" $ do
             ]
         )
   it "should check index constraint 2 = 2" $ do
-    solveIndexConstraints [ICSIndexEqual (Map.empty, COENumeral 2) (Map.empty, COENumeral 2)] `shouldReturn` Right Map.empty
+    solveIndexConstraints [ICSEqual (Map.empty, COENumeral 2) (Map.empty, COENumeral 2)] `shouldReturn` Right Map.empty
   it "should check index constraint x = 2" $ do
-    solveIndexConstraints [ICSIndexEqual (Map.empty, COEVar 0) (Map.empty, COENumeral 2)] `shouldReturn` Right (Map.fromList [(0, 2)])
+    solveIndexConstraints [ICSEqual (Map.empty, COEVar (CoeffVar 0)) (Map.empty, COENumeral 2)] `shouldReturn` Right (Map.fromList [(CoeffVar 0, 2)])
 
 main :: IO ()
 main = do
