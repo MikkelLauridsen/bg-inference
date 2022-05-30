@@ -2,10 +2,12 @@ module Index
   ( CoeffVar (..),
     IndexVar (..),
     Coefficient (..),
-    Index,
+    Index (..),
     IndexVarConstraint (..),
     IndexVarConstraintEnv,
-    (.+)
+    (.+),
+    (.*),
+    indexSubst
   )
 where
 
@@ -23,11 +25,16 @@ data Coefficient
   | COEMul Coefficient Coefficient 
   deriving (Ord, Eq)
 
-type Index = (Map IndexVar Coefficient, Coefficient)
+newtype Index = Index (Map IndexVar Coefficient, Coefficient) deriving (Ord, Eq)
 
 data IndexVarConstraint = IVCLessEq Index Index deriving (Ord, Eq)
 
 type IndexVarConstraintEnv = (Set IndexVar, Set IndexVarConstraint)
+
+
+instance Show IndexVarConstraint where
+
+  show (IVCLessEq ix jx) = show ix ++ " <= " ++ show jx
 
 
 instance Show CoeffVar where
@@ -40,5 +47,29 @@ instance Show IndexVar where
   show (IndexVar n) = 'i' : show n
 
 
+instance Show Coefficient where
+
+  show (COEVar alpha) = show alpha
+  show (COENumeral n) = show n
+  show (COEAdd c c') = "(" ++ show c ++ "+" ++ show c' ++ ")"
+  show (COEMul c c') = show c ++ show c'
+
+
+instance Show Index where
+
+  show (Index (m, c)) = show c ++ Map.foldrWithKey (\i c' s -> show c ++ show i ++ " + " ++ s) "" m 
+
+
 (.+) :: Index -> Index -> Index
-(.+) (m, c) (m', c') = (Map.unionWith COEAdd m m', COEAdd c c')
+(.+) (Index (m, c)) (Index (m', c')) = Index (Map.unionWith COEAdd m m', COEAdd c c')
+
+(.*) :: Coefficient -> Index -> Index
+(.*) c (Index (m', c')) = Index (Map.map (COEMul c) m', COEMul c c')
+
+indexSubst :: Index -> Map IndexVar Index -> Index
+indexSubst (Index (m, c)) subst = Map.foldr (.+) (Index (Map.empty, c)) $ Map.mapWithKey factor subst
+  where
+    factor i ix =
+      case Map.lookup i m of
+        Just c' -> c' .* ix
+        _ -> ix

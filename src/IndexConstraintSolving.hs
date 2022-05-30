@@ -17,11 +17,11 @@ zeroCoeff = COENumeral 0
 
 reduceIndexConstraints :: [IndexConstraint] -> [CoefficientConstraint]
 reduceIndexConstraints [] = []
-reduceIndexConstraints (ICSEqual (ix1m, ix1b) (ix2m, ix2b) : r) =
+reduceIndexConstraints (ICSEqual (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r) =
   CCSEqual ix1b ix2b :
   Prelude.map (\k -> CCSEqual (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix1m)) (Map.keys ix1m `union` Map.keys ix2m)
     ++ reduceIndexConstraints r
-reduceIndexConstraints (ICSLessEq env (ix1m, ix1b) (ix2m, ix2b) : r) =
+reduceIndexConstraints (ICSLessEq env (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r) =
   CCSLessEq ix1b ix2b :
   Prelude.map (\k -> CCSLessEq (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix1m)) (Map.keys ix1m `union` Map.keys ix2m)
     ++ reduceIndexConstraints r

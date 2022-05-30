@@ -121,7 +121,6 @@ instance Free UseCapability where
 instance Free TypeConstraint where
 
   ftv (TCSEqual t s) = ftv t `Set.union` ftv s
-  ftv (TCSEqualIndex ix jx) = ftv ix `Set.union` ftv jx
   ftv (TCSInvariant (_, phi) t) = ftv phi `Set.union` ftv t
   ftv (TCSConditionalSubsumption cgammas (_, phi) t s) = ftv cgammas `Set.union` ftv phi `Set.union` ftv t `Set.union` ftv s
   ftv (TCSUse uc) = ftv uc
@@ -130,10 +129,8 @@ instance Free TypeConstraint where
   fuv (TCSInvariant _ t) = fuv t
   fuv (TCSConditionalSubsumption cgammas _ t s) = fuv cgammas `Set.union` fuv t `Set.union` fuv s
   fuv (TCSUse uc) = fuv uc
-  fuv _ = Set.empty
 
   fiv (TCSEqual t s) = fiv t `Set.union` fiv s
-  fiv (TCSEqualIndex ix jx) = fiv ix `Set.union` fiv jx
   fiv (TCSInvariant (vphi, _) _) = vphi
   fiv (TCSConditionalSubsumption _ (vphi, _) _ _) = vphi
   fiv (TCSUse uc) = fiv uc 
@@ -181,3 +178,12 @@ instance Free IndexVarConstraint where
     fuv _ = Set.empty
 
     fiv (IVCLessEq ix jx) = fiv ix `Set.union` fiv jx
+
+
+instance Free Index where
+
+    ftv (Index pair) = ftv pair
+
+    fuv (Index pair) = fuv pair
+
+    fiv (Index pair) = fiv pair

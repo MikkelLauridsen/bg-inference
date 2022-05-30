@@ -101,4 +101,4 @@ satisfiesUC f (USCConditional cgammas cgamma) = satisfiesAll f cgammas || satisf
 
 
 zeroIndex :: Set IndexVar -> Index
-zeroIndex vphi = (Map.fromList $ Prelude.zip (Set.toList vphi) (Prelude.map COENumeral [0, 0 ..]), COENumeral 0) 
+zeroIndex vphi = Index (Map.fromList $ Prelude.zip (Set.toList vphi) (Prelude.map COENumeral [0, 0 ..]), COENumeral 0) 

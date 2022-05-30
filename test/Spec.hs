@@ -3,6 +3,7 @@ import Data.Map as Map
 import Index
 import IndexConstraintSolving
 import Inference
+import TypeInference
 import PiCalculus
 import Test.Hspec
 import Types
@@ -22,10 +23,16 @@ inferenceSpec = describe "Inference" $ do
               (b7, STNat)
             ]
         )
+  
+  it "should infer constraints for the running example" $ do
+    inferTypes (Set.empty, Set.empty) Map.empty inferenceRunningExampleWithST
+      `shouldBe` Right
+        ( Map.empty, Set.empty, Index (Map.empty, COENumeral 0) )
+
   it "should check index constraint 2 = 2" $ do
-    solveIndexConstraints [ICSEqual (Map.empty, COENumeral 2) (Map.empty, COENumeral 2)] `shouldReturn` Right Map.empty
+    solveIndexConstraints [ICSEqual (Index (Map.empty, COENumeral 2)) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right Map.empty
   it "should check index constraint x = 2" $ do
-    solveIndexConstraints [ICSEqual (Map.empty, COEVar (CoeffVar 0)) (Map.empty, COENumeral 2)] `shouldReturn` Right (Map.fromList [(CoeffVar 0, 2)])
+    solveIndexConstraints [ICSEqual (Index (Map.empty, COEVar (CoeffVar 0))) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right (Map.fromList [(CoeffVar 0, 2)])
 
 main :: IO ()
 main = do
@@ -61,3 +68,25 @@ inferenceRunningExample =
               )
       )
       :|: RestrictP "r" tb4 (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
+
+
+inferenceRunningExampleWithST :: Proc
+inferenceRunningExampleWithST =
+  RestrictP "npar" (STServ (Set.singleton (IndexVar 0)) [STNat, STChannel []]) $
+    RepInputP
+      "npar"
+      ["n", "r"]
+      ( MatchNatP
+          (VarE "n")
+          (OutputP "r" [])
+          "x"
+          $ RestrictP "r'" (STChannel []) $
+            RestrictP
+              "r''"
+              (STChannel [])
+              ( TickP (OutputP "r'" [])
+                  :|: OutputP "npar" [VarE "x", VarE "r''"]
+                  :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
+              )
+      )
+      :|: RestrictP "r" (STChannel []) (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
