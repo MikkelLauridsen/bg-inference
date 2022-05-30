@@ -25,7 +25,7 @@ data UseConstraint --c_IO, USC = Use constraint
   | USCConditional [UseCapabilityConstraint] UseCapabilityConstraint
   | USCCoefficient IndexConstraint
 
-data IndexConstraint -- c_I, ICS = Coefficient constraint
+data IndexConstraint -- c_I, ICS = Index constraint
   = ICSIndexEqual Index Index
   | ICSLessEq IndexTypeConstraintEnv Index Index
   | ICSFalse

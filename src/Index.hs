@@ -1,9 +1,9 @@
 module Index
   ( CoefficientVar,
     IndexVar,
-    Coefficient,
+    Coefficient (..),
     Index,
-    IndexTypeConstraint,
+    IndexTypeConstraint (..),
     IndexTypeConstraintEnv,
   )
 where
@@ -19,6 +19,6 @@ data Coefficient = COEVar CoefficientVar | COENumeral Double | COEAdd Coefficien
 
 type Index = (Map IndexVar Coefficient, Coefficient)
 
-data IndexTypeConstraint = ICSLessEq Index Index
+data IndexTypeConstraint = ITCSLessEq Index Index
 
 type IndexTypeConstraintEnv = (Set IndexVar, Set IndexTypeConstraint)
