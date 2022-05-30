@@ -1,24 +1,44 @@
 module Index
-  ( CoefficientVar,
-    IndexVar,
+  ( CoeffVar (..),
+    IndexVar (..),
     Coefficient (..),
     Index,
-    IndexTypeConstraint (..),
-    IndexTypeConstraintEnv,
+    IndexVarConstraint (..),
+    IndexVarConstraintEnv,
+    (.+)
   )
 where
 
-import Data.Map
-import Data.Set
+import Data.Map as Map
+import Data.Set as Set
 
-type CoefficientVar = Int
+newtype CoeffVar = CoeffVar Int deriving (Eq, Ord)
 
-type IndexVar = Int
+newtype IndexVar = IndexVar Int deriving (Eq, Ord)
 
-data Coefficient = COEVar CoefficientVar | COENumeral Double | COEAdd Coefficient Coefficient | COEMul Coefficient Coefficient
+data Coefficient 
+  = COEVar CoeffVar 
+  | COENumeral Double 
+  | COEAdd Coefficient Coefficient 
+  | COEMul Coefficient Coefficient 
+  deriving (Ord, Eq)
 
 type Index = (Map IndexVar Coefficient, Coefficient)
 
-data IndexTypeConstraint = ITCSLessEq Index Index
+data IndexVarConstraint = IVCLessEq Index Index deriving (Ord, Eq)
 
-type IndexTypeConstraintEnv = (Set IndexVar, Set IndexTypeConstraint)
+type IndexVarConstraintEnv = (Set IndexVar, Set IndexVarConstraint)
+
+
+instance Show CoeffVar where
+
+  show (CoeffVar n) = 'a' : show n
+
+
+instance Show IndexVar where
+
+  show (IndexVar n) = 'i' : show n
+
+
+(.+) :: Index -> Index -> Index
+(.+) (m, c) (m', c') = (Map.unionWith COEAdd m m', COEAdd c c')

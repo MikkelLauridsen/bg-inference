@@ -7,11 +7,17 @@ import Constraints
 import Control.Monad
 import qualified Control.Monad
 import Data.Map as Map
+import Data.Set as Set
 import qualified Data.Maybe
 import Types
 
 -- Simple types enriched with a type that may be eihter a channel or a server
-data SimpleTypeEnriched = STEVar TypeVar | STENat | STEChannel [SimpleTypeEnriched] | STEServ [IndexVar] [SimpleTypeEnriched] | STEChannelOrServ [SimpleTypeEnriched] deriving (Show)
+data SimpleTypeEnriched 
+  = STEVar TypeVar 
+  | STENat 
+  | STEChannel [SimpleTypeEnriched] 
+  | STEServ (Set IndexVar) [SimpleTypeEnriched] 
+  | STEChannelOrServ [SimpleTypeEnriched] deriving (Show)
 
 data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched
 
