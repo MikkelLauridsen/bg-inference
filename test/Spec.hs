@@ -8,6 +8,7 @@ import PiCalculus
 import Test.Hspec
 import Types
 import qualified Data.Set as Set
+import Engine (inferBound)
 
 inferenceSpec = describe "Inference" $ do
   it "should infer simple types of running example" $ do
@@ -23,11 +24,15 @@ inferenceSpec = describe "Inference" $ do
               (b7, STNat)
             ]
         )
-  
+
   it "should infer constraints for the running example" $ do
     inferTypes (Set.empty, Set.empty) Map.empty inferenceRunningExampleWithST
       `shouldBe` Right
         ( Map.empty, Set.empty, Index (Map.empty, COENumeral 0) )
+
+  it "should infer bound on running example" $ do
+    inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
+      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
 
   it "should check index constraint 2 = 2" $ do
     solveIndexConstraints [ICSEqual (Index (Map.empty, COENumeral 2)) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right Map.empty

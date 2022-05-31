@@ -7,17 +7,18 @@ import Constraints
 import Control.Monad
 import qualified Control.Monad
 import Data.Map as Map
-import Data.Set as Set
 import qualified Data.Maybe
+import Data.Set as Set
 import Types
 
 -- Simple types enriched with a type that may be eihter a channel or a server
-data SimpleTypeEnriched 
-  = STEVar TypeVar 
-  | STENat 
-  | STEChannel [SimpleTypeEnriched] 
-  | STEServ (Set IndexVar) [SimpleTypeEnriched] 
-  | STEChannelOrServ [SimpleTypeEnriched] deriving (Show)
+data SimpleTypeEnriched
+  = STEVar TypeVar
+  | STENat
+  | STEChannel [SimpleTypeEnriched]
+  | STEServ (Set IndexVar) [SimpleTypeEnriched]
+  | STEChannelOrServ [SimpleTypeEnriched]
+  deriving (Show)
 
 data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched
 
@@ -46,7 +47,7 @@ liftSTConstraint :: SimpleTypeConstraint -> SimpleTypeEnrichedConstraint
 liftSTConstraint (STCSEqual t1 t2) = STECSEqual (liftSTType t1) (liftSTType t2)
 liftSTConstraint (STCSChannelServer t ts) = STECSEqual (liftSTType t) (STEChannelOrServ (Prelude.map liftSTType ts))
 
-fromListFailable :: Ord k => (a -> a -> Either String a) -> [(k, a)] -> Either String (Map.Map k a)
+fromListFailable :: (Monad m, Ord k) => (a -> a -> m a) -> [(k, a)] -> m (Map k a)
 fromListFailable _ [] = return Map.empty
 fromListFailable f ((k, v) : rest) = do
   rest' <- fromListFailable f rest
