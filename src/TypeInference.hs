@@ -65,7 +65,7 @@ freshTemplate vphi = do
 
 
 freshType :: Set IndexVar -> SimpleType -> Infer Type
-freshType vphi (STVar _) = fail "invalid simple types"
+freshType vphi (STVar _) = fail "Simple type not instantiated"
 freshType vphi (STNat) = do
     ix <- freshTemplate vphi
     jx <- freshTemplate vphi
@@ -100,11 +100,11 @@ assertConstraint = assertConstraints . Set.singleton
 
 
 zeroIndex :: Set IndexVar -> Index
-zeroIndex vphi = Index (Map.fromList $ Prelude.zip (Set.toList vphi) (Prelude.map COENumeral [0, 0 ..]), COENumeral 0) 
+zeroIndex vphi = Index (Map.empty, COENumeral 0) 
 
 
 oneIndex :: Set IndexVar -> Index
-oneIndex vphi = Index (Map.fromList $ Prelude.zip (Set.toList vphi) (Prelude.map COENumeral [0, 0 ..]), COENumeral 1) 
+oneIndex vphi = Index (Map.empty, COENumeral 1) 
 
 
 delay :: Index -> Type -> Type
@@ -191,7 +191,7 @@ inferProc env@(vphi, _) senv (InputP a vs p) =
             assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCIn) gamma))
             assertConstraint $ TCSUse (USCConditionalInequality [] env (kx .+ ix) kx')
             return ((delayEnv ix $ Prelude.foldr Map.delete tenv vs) .: (a, TChannel gamma ix ts), kx')
-        _ -> fail "invalid simple types"
+        _ -> fail "invalid simple type; Expected channel type"
 
 inferProc env@(vphi, phi) senv (RepInputP a vs p) =
     case Map.lookup a senv of
@@ -209,7 +209,7 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
             return ((delayEnv ix tenv'') .: (a, TServ ix is gamma kx'' ts), kx') 
 
 
-        _ -> fail "invalid simple types"
+        _ -> fail "invalid simple type; Expected server type"
 
 inferProc env@(vphi, _) senv (OutputP a es) = do
     (tenvs, ss) <- mapM (inferExp env senv) es >>= return . unzip
@@ -235,4 +235,4 @@ inferProc env@(vphi, _) senv (OutputP a es) = do
             assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCOut) gamma))
             return ((delayEnv ix $ Prelude.foldr Map.union Map.empty tenvs) .: (a, TServ ix is gamma kx' ts), kx)
         
-        _ -> fail "invalid simple types"
+        _ -> fail "invalid simple type; Expected channel type or server type"

@@ -168,6 +168,7 @@ inferExpSimpleType (SuccE e) = inContext "SuccE" [] $ do
   t <- inferExpSimpleType e
   case t of
     STNat -> return STNat
+    beta@(STVar _) -> assertSimpleTypeConstraint (C.STCSEqual beta STNat) >> return beta
     _ -> returnError "error: succ of non-nat"
 inferExpSimpleType (VarE v) = inContext "VarE" [] $ lookupSimpleType v
 

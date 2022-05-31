@@ -34,11 +34,15 @@ inferenceSpec = describe "Inference" $ do
 
   it "should infer bound on simple example" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
+      `shouldReturn` Right (Index (Map.empty, COENumeral 4))
+
+  it "should infer bound on fib(3)" $ do
+    inferBound 2 (Set.empty, Set.empty) Map.empty fib3
       `shouldReturn` Right (Index (Map.empty, COENumeral 3))
 
-  --it "should infer bound on running example" $ do
-  --  inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
-  --    `shouldReturn` Right (Index (Map.empty, COENumeral 3))
+  it "should infer bound on running example" $ do
+    inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
+      `shouldReturn` Right (Index (Map.empty, COENumeral 2))
 
   it "should check index constraint 2 = 2" $ do
     solveIndexConstraints [ICSEqual (Index (Map.empty, COENumeral 2)) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right Map.empty
@@ -57,7 +61,7 @@ simpleTypeVars = [STVar i | i <- typeVars]
 
 b1 : b2 : b3 : b4 : b5 : b6 : b7 : br = typeVars
 
-tb1 : tb2 : tb3 : tb4 : tbr = simpleTypeVars
+tb1 : tb2 : tb3 : tb4 : tb5 : tbr = simpleTypeVars
 
 simpleInfExample :: Proc
 simpleInfExample =
@@ -77,7 +81,7 @@ inferenceRunningExample =
             RestrictP
               "r''"
               tb3
-              ( TickP (TickP (TickP (OutputP "r'" [])))
+              ( TickP  (TickP (OutputP "r'" []))
                   :|: OutputP "npar" [VarE "x", VarE "r''"]
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
               )
@@ -104,3 +108,37 @@ inferenceRunningExampleWithST =
               )
       )
       :|: RestrictP "r" (STChannel []) (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
+
+
+fib3 :: Proc
+fib3 =
+  RestrictP "add" tb1 $ RestrictP "fib" tb2 $ addProc :|: fibProc :|: RestrictP "rret" tb5 (OutputP "fib" [SuccE (SuccE (SuccE ZeroE)), VarE "rret"])
+
+
+addProc :: Proc
+addProc =
+  RepInputP
+    "add"
+    ["n", "m", "r"]
+    (MatchNatP
+      (VarE "n")
+      (OutputP "r" [VarE "m"])
+      "n'"
+      (OutputP "add" [VarE "n'", SuccE (VarE "m"), VarE "r"]))
+
+
+fibProc :: Proc
+fibProc =
+  RepInputP 
+    "fib" 
+    ["x", "r"]
+    (MatchNatP 
+      (VarE "x")
+      (OutputP "r" [ZeroE])
+      "y"
+      (MatchNatP
+        (VarE "y")
+        (OutputP "r" [SuccE ZeroE])
+        "z"
+        (RestrictP "r'" tb3 $ RestrictP "r''" tb4 (OutputP "r'" [(VarE "y")] :|: OutputP "r''" [VarE "z"] :|: InputP "r'" ["n"] (InputP "r''" ["m"] (TickP $ OutputP "add" [VarE "n", VarE "m", VarE "r"]))))
+        ))
