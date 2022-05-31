@@ -28,7 +28,7 @@ reduceIndexConstraints (ICSLessEq env (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) 
 reduceIndexConstraints (ICSFalse : r) = CCSFalse : reduceIndexConstraints r
 
 
-solveIndexConstraints :: [IndexConstraint] -> IO (Either String (Map.Map CoeffVar Rational))
+solveIndexConstraints :: [IndexConstraint] -> IO (Either String (Map.Map CoeffVar Integer))
 solveIndexConstraints constraints = do
   res <- evalZ3 script
   case res of
@@ -45,7 +45,7 @@ solveIndexConstraints constraints = do
       fmap snd $
         withModel $ \m -> do
           let (vars, varAsts) = unzip vMaps'
-          mVals <- mapM (evalReal m) varAsts <&> catMaybes
+          mVals <- mapM (evalInt m) varAsts <&> catMaybes
           return (Sat, Map.fromList (zip vars mVals))
 
 coefficientConstraintToZ3 :: CoefficientConstraint -> Z3 (AST, [(CoeffVar, AST)])
@@ -66,7 +66,9 @@ coefficientConstraintToZ3 CCSFalse = do
 coefficientToZ3 :: Coefficient -> Z3 (AST, [(CoeffVar, AST)])
 coefficientToZ3 (COEVar c@(CoeffVar v)) = do
   sym <- mkIntSymbol v
-  ast <- mkRealVar sym
+  ast <- mkIntVar sym
+  _0 <- mkIntNum 0
+  assert =<< mkGe ast _0
   return (ast, [(c, ast)])
 coefficientToZ3 (COENumeral n) = do
   ast <- mkRealNum 2

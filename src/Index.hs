@@ -21,7 +21,7 @@ newtype IndexVar = IndexVar Int deriving (Eq, Ord)
 
 data Coefficient 
   = COEVar CoeffVar 
-  | COENumeral Rational 
+  | COENumeral Integer
   | COEAdd Coefficient Coefficient 
   | COEMul Coefficient Coefficient 
   deriving (Ord, Eq)
@@ -76,12 +76,12 @@ indexSubst (Index (m, c)) subst = Map.foldr (.+) (Index (Map.empty, c)) $ Map.ma
         _ -> ix
 
   
-applyISubst :: Map CoeffVar Rational -> Index -> Index
+applyISubst :: Map CoeffVar Integer -> Index -> Index
 applyISubst substI (Index (m, c)) = Index (Map.map aux m, aux c)
   where
     aux c'@(COEVar alpha) =
       case Map.lookup alpha substI of
-        Just rati -> COENumeral rati
+        Just num -> COENumeral num
         _ -> c'
 
     aux c'@(COENumeral _) = c'
