@@ -7,7 +7,8 @@ module Index
     IndexVarConstraintEnv,
     (.+),
     (.*),
-    indexSubst
+    indexSubst,
+    applyISubst
   )
 where
 
@@ -20,7 +21,7 @@ newtype IndexVar = IndexVar Int deriving (Eq, Ord)
 
 data Coefficient 
   = COEVar CoeffVar 
-  | COENumeral Double 
+  | COENumeral Rational 
   | COEAdd Coefficient Coefficient 
   | COEMul Coefficient Coefficient 
   deriving (Ord, Eq)
@@ -73,3 +74,16 @@ indexSubst (Index (m, c)) subst = Map.foldr (.+) (Index (Map.empty, c)) $ Map.ma
       case Map.lookup i m of
         Just c' -> c' .* ix
         _ -> ix
+
+  
+applyISubst :: Map CoeffVar Rational -> Index -> Index
+applyISubst substI (Index (m, c)) = Index (Map.map aux m, aux c)
+  where
+    aux c'@(COEVar alpha) =
+      case Map.lookup alpha substI of
+        Just rati -> COENumeral rati
+        _ -> c'
+
+    aux c'@(COENumeral _) = c'
+    aux (COEAdd c' c'') = COEAdd (aux c') (aux c'')
+    aux (COEMul c' c'') = COEMul (aux c') (aux c'')

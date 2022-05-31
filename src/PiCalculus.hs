@@ -4,10 +4,12 @@ module PiCalculus
     Proc (..),
     natExp,
     nTick,
+    applySTVSubst
   )
 where
 
 import Types
+import Data.Map as Map
 
 type Var = String
 
@@ -35,3 +37,20 @@ data Proc
   | RestrictP Var SimpleType Proc
   | MatchNatP Exp Proc Var Proc
   deriving (Show)
+
+
+applySTVSubst :: SimpleTypeSubstitution -> Proc -> Proc
+applySTVSubst subst (TickP p) = TickP $ applySTVSubst subst p
+applySTVSubst subst (p :|: q) = applySTVSubst subst p :|: applySTVSubst subst q
+applySTVSubst subst (InputP a vs p) = InputP a vs $ applySTVSubst subst p
+applySTVSubst subst (RepInputP a vs p) = RepInputP a vs $ applySTVSubst subst p
+applySTVSubst subst (RestrictP a st p) = RestrictP a (aux st) $ applySTVSubst subst p
+  where
+    aux st'@(STVar beta) = Map.findWithDefault st' beta subst 
+    aux STNat = STNat
+    aux (STChannel sts) = STChannel $ Prelude.map aux sts
+    aux (STServ is sts) = STServ is $ Prelude.map aux sts
+
+applySTVSubst subst (MatchNatP e p x q) = MatchNatP e (applySTVSubst subst p) x (applySTVSubst subst q)
+applySTVSubst _ p = p
+

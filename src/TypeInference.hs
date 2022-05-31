@@ -2,7 +2,8 @@
 
 module TypeInference
 ( inferTypes
-
+, TypeEnv
+, SimpleEnv
 ) where
 
 import Constraints

@@ -27,7 +27,6 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
       Index
       Types
       Constraints
@@ -38,6 +37,7 @@ library
       Free
       ConstraintReduction
       TypeInference
+      Engine
   other-modules:
       Paths_bg_inference
   hs-source-dirs:
