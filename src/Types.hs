@@ -61,8 +61,8 @@ instance Show UseCapability where
 
 instance Show Type where
   show (TNat ix jx) = "Nat[" ++ show ix ++ ", " ++ show jx ++ "]"
-  show (TChannel sigma ix ts) = "ch^" ++ show sigma ++ "_" ++ show ix ++ "(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
-  show (TServ ix is sigma kx ts) = "\\forall_" ++ show ix ++ "{" ++ intercalate ", " (Prelude.map show (Set.toList is)) ++ "}.serv^" ++ show sigma ++ "_" ++ show kx ++ "(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
+  show (TChannel sigma ix ts) = "ch^{" ++ show sigma ++ "}_{" ++ show ix ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
+  show (TServ ix is sigma kx ts) = "\\forall_{" ++ show ix ++ "}{" ++ intercalate ", " (Prelude.map show (Set.toList is)) ++ "}.serv^{" ++ show sigma ++ "}_{" ++ show kx ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
 
 typeSubst :: Map IndexVar Index -> Type -> Type
 typeSubst subst (TNat ix jx) = TNat (indexSubst ix subst) (indexSubst jx subst)

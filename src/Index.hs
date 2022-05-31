@@ -14,6 +14,7 @@ where
 
 import Data.Map as Map
 import Data.Set as Set
+import Data.List (intercalate)
 
 newtype CoeffVar = CoeffVar Int deriving (Eq, Ord)
 
@@ -58,7 +59,7 @@ instance Show Coefficient where
 
 instance Show Index where
 
-  show (Index (m, c)) = show c ++ Map.foldrWithKey (\i c' s -> show c ++ show i ++ " + " ++ s) "" m 
+  show (Index (m, c)) = intercalate " + " (show c : Prelude.map (\(i, c') -> show c' ++ show i) (Map.assocs m))
 
 
 (.+) :: Index -> Index -> Index

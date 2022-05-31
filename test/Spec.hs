@@ -30,9 +30,13 @@ inferenceSpec = describe "Inference" $ do
       `shouldBe` Right
         ( Map.empty, Set.empty, Index (Map.empty, COENumeral 0) )
 
-  it "should infer bound on running example" $ do
-    inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
-      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
+  it "should infer bound on simple example" $ do
+    inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
+      `shouldReturn` Right (Index (Map.empty, COENumeral 3))
+
+  --it "should infer bound on running example" $ do
+  --  inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
+  --    `shouldReturn` Right (Index (Map.empty, COENumeral 3))
 
   it "should check index constraint 2 = 2" $ do
     solveIndexConstraints [ICSEqual (Index (Map.empty, COENumeral 2)) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right Map.empty
@@ -53,6 +57,10 @@ b1 : b2 : b3 : b4 : b5 : b6 : b7 : br = typeVars
 
 tb1 : tb2 : tb3 : tb4 : tbr = simpleTypeVars
 
+simpleInfExample :: Proc
+simpleInfExample =
+  TickP (TickP (TickP (TickP NilP)))
+
 inferenceRunningExample :: Proc
 inferenceRunningExample =
   RestrictP "npar" tb1 $
@@ -67,7 +75,7 @@ inferenceRunningExample =
             RestrictP
               "r''"
               tb3
-              ( TickP (OutputP "r'" [])
+              ( TickP (TickP (TickP (OutputP "r'" [])))
                   :|: OutputP "npar" [VarE "x", VarE "r''"]
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
               )
