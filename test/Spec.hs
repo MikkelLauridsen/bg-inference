@@ -25,6 +25,28 @@ inferenceSpec = describe "Inference" $ do
             ]
         )
 
+  it "should infer simple types of fib(3)" $ do
+    inferSimpleTypes 2 fib3
+      `shouldBe` Right
+        ( Map.fromList
+            [ (0, STServ (Set.fromList [i1, i2]) [STNat, STNat, STChannel [STNat]]),
+              (1, STServ (Set.fromList [i2, i3]) [STNat, STChannel [STNat]]),
+              (2, STChannel [STNat]),
+              (3, STChannel [STNat]),
+              (4, STChannel [STNat]),
+              (5, STNat),
+              (6, STNat),
+              (7, STChannel [STNat]),
+              (8, STNat),
+              (9, STNat),
+              (10, STChannel [STNat]),
+              (11, STNat),
+              (12, STNat),
+              (13, STNat),
+              (14, STNat)
+            ]
+        )
+
   it "should infer constraints for the running example" $ do
     inferTypes (Set.empty, Set.empty) Map.empty inferenceRunningExampleWithST
       `shouldSatisfy` \r ->
@@ -57,11 +79,16 @@ typeVars :: [TypeVar]
 typeVars = [0 ..]
 
 simpleTypeVars :: [SimpleType]
-simpleTypeVars = [STVar i | i <- typeVars]
+simpleTypeVars = Prelude.map STVar [0 ..]
 
-b1 : b2 : b3 : b4 : b5 : b6 : b7 : br = typeVars
+indexVars :: [IndexVar]
+indexVars = Prelude.map IndexVar [0 ..]
 
-tb1 : tb2 : tb3 : tb4 : tb5 : tbr = simpleTypeVars
+b1 : b2 : b3 : b4 : b5 : b6 : b7 : _ = typeVars
+
+tb1 : tb2 : tb3 : tb4 : tb5 : _ = simpleTypeVars
+
+i1 : i2 : i3 : _ = indexVars
 
 simpleInfExample :: Proc
 simpleInfExample =
@@ -81,7 +108,7 @@ inferenceRunningExample =
             RestrictP
               "r''"
               tb3
-              (  (TickP (OutputP "r'" []))
+              ( TickP (OutputP "r'" [])
                   :|: OutputP "npar" [VarE "x", VarE "r''"]
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
               )
@@ -109,56 +136,35 @@ inferenceRunningExampleWithST =
       )
       :|: RestrictP "r" (STChannel []) (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
 
-
-
 fib3 :: Proc
 fib3 =
-  RestrictP "add" tb1 $ RestrictP "fib" tb2 $ addProc :|: fibProc :|: RestrictP "rret" tb5 (OutputP "fib" [SuccE (SuccE (SuccE ZeroE)), VarE "rret"])
-
+  RestrictP "add" tb1 $ RestrictP "fib" tb2 $ addProc :|: fibProc :|: RestrictP "rret" tb5 (OutputP "fib" [natExp 3, VarE "rret"])
 
 addProc :: Proc
 addProc =
   RepInputP
     "add"
     ["n", "m", "r"]
-    (MatchNatP
-      (VarE "n")
-      (OutputP "r" [VarE "m"])
-      "n'"
-      (OutputP "add" [VarE "n'", SuccE (VarE "m"), VarE "r"]))
-
+    ( MatchNatP
+        (VarE "n")
+        (OutputP "r" [VarE "m"])
+        "n'"
+        (OutputP "add" [VarE "n'", SuccE (VarE "m"), VarE "r"])
+    )
 
 fibProc :: Proc
 fibProc =
-  RepInputP 
-    "fib" 
+  RepInputP
+    "fib"
     ["x", "r"]
-    (MatchNatP 
-      (VarE "x")
-      (OutputP "r" [ZeroE])
-      "y"
-      (MatchNatP
-        (VarE "y")
-        (OutputP "r" [SuccE ZeroE])
-        "z"
-        (RestrictP "r'" tb3 $ RestrictP "r''" tb4 (OutputP "r'" [(VarE "y")] :|: OutputP "r''" [VarE "z"] :|: InputP "r'" ["n"] (InputP "r''" ["m"] (TickP $ OutputP "add" [VarE "n", VarE "m", VarE "r"]))))
-        ))
-
-
-inferenceRunningExampleSim :: Proc
-inferenceRunningExampleSim =
-  RestrictP "npar" tb1 $
-    RepInputP
-      "npar"
-      ["n", "r"]
-      ( MatchNatP
-          (VarE "n")
-          (OutputP "r" [])
-          "x"
-          $ RestrictP "r'" tb2 
-              (  TickP NilP
-                  :|: OutputP "npar" [VarE "x", VarE "r'"]
-                  :|: InputP "r'" [] (OutputP "r" [])
-              )
-      )
-      :|: RestrictP "r" tb3 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
+    ( MatchNatP
+        (VarE "x")
+        (OutputP "r" [ZeroE])
+        "y"
+        ( MatchNatP
+            (VarE "y")
+            (OutputP "r" [SuccE ZeroE])
+            "z"
+            (RestrictP "r'" tb3 $ RestrictP "r''" tb4 (OutputP "r'" [VarE "y"] :|: OutputP "r''" [VarE "z"] :|: InputP "r'" ["n"] (InputP "r''" ["m"] (TickP $ OutputP "add" [VarE "n", VarE "m", VarE "r"]))))
+        )
+    )
