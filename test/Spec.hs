@@ -64,7 +64,7 @@ inferenceSpec = describe "Inference" $ do
 
   it "should infer bound on running example" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
-      `shouldReturn` Right (Index (Map.empty, COENumeral 2))
+      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
 
   it "should check index constraint 2 = 2" $ do
     solveIndexConstraints [ICSEqual (Index (Map.empty, COENumeral 2)) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right Map.empty
@@ -108,7 +108,7 @@ inferenceRunningExample =
             RestrictP
               "r''"
               tb3
-              ( TickP (TickP (OutputP "r'" []))
+              ( TickP (OutputP "r'" [])
                   :|: OutputP "npar" [VarE "x", VarE "r''"]
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
               )
