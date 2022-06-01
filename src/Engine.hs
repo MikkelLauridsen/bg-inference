@@ -1,5 +1,6 @@
 module Engine
-  ( inferBound,
+  ( inferBound
+  , inferBoundVerbose
   )
 where
 
@@ -28,3 +29,35 @@ inferBound ivarsPerServer env stenv p =
           case res of
             Left serr -> return $ Left serr
             Right substI -> return $ Right (applyISubst substI kx)
+
+
+inferBoundVerbose :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
+inferBoundVerbose ivarsPerServer env stenv p = do
+  putStrLn "Process prior to inference:"
+  putStrLn $ show p
+  case inferSimpleTypes ivarsPerServer p of -- TODO: extend with stenv
+    Left serr -> return $ Left serr
+    Right substST -> do
+      putStrLn "Inferred simple type substitution:"
+      putStrLn $ show substST
+      let p' = applySTVSubst substST p
+      case inferTypes env stenv p' of
+        Left serr -> return $ Left serr
+        Right (tenv, cs, kx) -> do
+          putStrLn "Inferred type-constraint satisfaction problem:"
+          putStrLn $ show cs
+          let reducedConstraints = reduceTypeConstraints cs
+          putStrLn "Reduced use-constraint satisfaction problem:"
+          putStrLn $ show reducedConstraints
+          let (cs', _) = solveUseConstraints reducedConstraints
+          putStrLn "Reduced index-constraint satisfaction problem:"
+          putStrLn $ show cs'
+          res <- solveIndexConstraints $ Set.toList cs'
+          case res of
+            Left serr -> return $ Left serr
+            Right substI -> do 
+                putStrLn "Resulting coefficient variable substitution:"
+                putStrLn $ show substI
+                putStrLn "Resulting complexity bound:"
+                putStrLn $ show (applyISubst substI kx)
+                return $ Right (applyISubst substI kx)

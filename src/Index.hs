@@ -36,17 +36,17 @@ type IndexVarConstraintEnv = (Set IndexVar, Set IndexVarConstraint)
 
 instance Show IndexVarConstraint where
 
-  show (IVCLessEq ix jx) = show ix ++ " <= " ++ show jx
+  show (IVCLessEq ix jx) = show ix ++ " \\leq " ++ show jx
 
 
 instance Show CoeffVar where
 
-  show (CoeffVar n) = 'a' : show n
+  show (CoeffVar n) = "\\alpha_{" ++ show n ++ "}"
 
 
 instance Show IndexVar where
 
-  show (IndexVar n) = 'i' : show n
+  show (IndexVar n) = "i_{" ++ show n ++ "}"
 
 
 instance Show Coefficient where

@@ -86,7 +86,7 @@ inferenceRunningExample =
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
               )
       )
-      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
+      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
 
 inferenceRunningExampleWithST :: Proc
 inferenceRunningExampleWithST =
@@ -108,6 +108,7 @@ inferenceRunningExampleWithST =
               )
       )
       :|: RestrictP "r" (STChannel []) (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
+
 
 
 fib3 :: Proc
@@ -142,3 +143,22 @@ fibProc =
         "z"
         (RestrictP "r'" tb3 $ RestrictP "r''" tb4 (OutputP "r'" [(VarE "y")] :|: OutputP "r''" [VarE "z"] :|: InputP "r'" ["n"] (InputP "r''" ["m"] (TickP $ OutputP "add" [VarE "n", VarE "m", VarE "r"]))))
         ))
+
+
+inferenceRunningExampleSim :: Proc
+inferenceRunningExampleSim =
+  RestrictP "npar" tb1 $
+    RepInputP
+      "npar"
+      ["n", "r"]
+      ( MatchNatP
+          (VarE "n")
+          (OutputP "r" [])
+          "x"
+          $ RestrictP "r'" tb2 
+              (  TickP NilP
+                  :|: OutputP "npar" [VarE "x", VarE "r'"]
+                  :|: InputP "r'" [] (OutputP "r" [])
+              )
+      )
+      :|: RestrictP "r" tb3 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)

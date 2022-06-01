@@ -42,24 +42,24 @@ data UseCapabilityConstraint -- c_gamma, UCCS = Use capability constraint
 
 instance Show TypeConstraint where
 
-  show (TCSEqual t s) = show t ++ "~" ++ show s
-  show (TCSInvariant env t) = showEnv env ++ "|= inv(" ++ show t ++ ")"
-  show (TCSConditionalSubsumption uccs env t s) = "(" ++ intercalate ", " (Prelude.map show uccs) ++  ") ==> (" ++ showEnv env ++ "|= " ++ show t ++ " \\sqsubseteq " ++ show s ++ ")"
+  show (TCSEqual t s) = show t ++ " \\sim " ++ show s
+  show (TCSInvariant env t) = showEnv env ++ "\\vDash \\texttt{inv}(" ++ show t ++ ")"
+  show (TCSConditionalSubsumption uccs env t s) = "(" ++ intercalate ", " (Prelude.map show uccs) ++  ") \\implies (" ++ showEnv env ++ " \\vdash " ++ show t ++ " \\sqsubseteq " ++ show s ++ ")"
   show (TCSUse cs) = show cs
 
 
 instance Show UseConstraint where
 
-  show (USCConditionalInequality uccs env ix jx) = "(" ++ intercalate ", " (Prelude.map show uccs) ++  ") ==> (" ++ showEnv env ++ "|= " ++ show ix ++ " <= " ++ show jx ++ ")"
-  show (USCConditional uccs ucc) = "(" ++ intercalate ", " (Prelude.map show uccs) ++  ") ==> " ++ show ucc
+  show (USCConditionalInequality uccs env ix jx) = "(" ++ intercalate ", " (Prelude.map show uccs) ++  ") \\implies (" ++ showEnv env ++ " \\vDash " ++ show ix ++ " \\leq " ++ show jx ++ ")"
+  show (USCConditional uccs ucc) = "(" ++ intercalate ", " (Prelude.map show uccs) ++  ") \\implies " ++ show ucc
   show (USCIndex cs) = show cs
 
 
 instance Show IndexConstraint where
 
-  show (ICSEqual ix jx) = show ix ++ "~" ++ show jx
-  show (ICSLessEq env ix jx) = showEnv env ++ "|= " ++ show ix ++ " <= " ++ show jx
-  show ICSFalse = "FALSE"
+  show (ICSEqual ix jx) = show ix ++ " \\sim " ++ show jx
+  show (ICSLessEq env ix jx) = showEnv env ++ " \\vDash " ++ show ix ++ " \\leq " ++ show jx
+  show ICSFalse = "\\texttt{false} "
 
 
 instance Show UseCapabilityConstraint where
@@ -67,4 +67,4 @@ instance Show UseCapabilityConstraint where
   show (UCCSSubset sigma sigma') = show sigma ++ " \\subseteq " ++ show sigma'
 
 
-showEnv (vphi, phi) = "{" ++ intercalate ", " (Prelude.map show $ Set.toList vphi) ++ "};{" ++ intercalate ", " (Prelude.map show $ Set.toList phi) ++ "}"
+showEnv (vphi, phi) = "\\{" ++ intercalate ", " (Prelude.map show $ Set.toList vphi) ++ "\\};\\{" ++ intercalate ", " (Prelude.map show $ Set.toList phi) ++ "\\} "
