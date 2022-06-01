@@ -24,10 +24,6 @@ data InferState = InferState
     ivarCount :: Int,
     stack :: [(String, [(String, String)])],
     simpleTypeConstraints :: [C.SimpleTypeConstraint],
-    typeConstraints :: [C.TypeConstraint],
-    useConstraints :: [C.UseConstraint],
-    indexConstraints :: [C.IndexConstraint],
-    useCapabilityConstraints :: [C.UseCapabilityConstraint],
     simpleTypeContext :: Map.Map Var SimpleType, -- Maps
     ivarsPerServer :: Int
   }
@@ -38,11 +34,11 @@ instance MonadFail (Either (InferState, String)) where
   fail s = Left (defaultState 0, s)
 
 defaultState :: Int -> InferState
-defaultState = InferState 0 0 [] [] [] [] [] [] Map.empty
+defaultState = InferState 0 0 [] [] Map.empty
 
 runInfer :: Int -> Infer a -> Either String a
 runInfer ivarsPerServer m = case evalStateT m (defaultState ivarsPerServer) of
-  Left (InferState _ _ s _ _ _ _ _ _ _, msg) ->
+  Left (InferState _ _ s _ _ _, msg) ->
     Left $
       "Error during process check: " ++ msg ++ "\n"
         ++ "StackTrace: "
@@ -63,6 +59,7 @@ inferSimpleTypes ivarsPerServer p =
   runInfer ivarsPerServer $ do
     updateTvarCount p
     inferSimpleConstraintTypes p
+    simpleTypeContext <- gets simpleTypeContext
     solveSimpleTypeConstraints
 
 solveSimpleTypeConstraints :: Infer SimpleTypeSubstitution
@@ -139,26 +136,6 @@ assertSimpleTypeConstraint :: C.SimpleTypeConstraint -> Infer ()
 assertSimpleTypeConstraint c = do
   s <- get
   put $ s {simpleTypeConstraints = c : simpleTypeConstraints s}
-
-assertTypeConstraint :: C.TypeConstraint -> Infer ()
-assertTypeConstraint c = do
-  s <- get
-  put $ s {typeConstraints = c : typeConstraints s}
-
-assertUseConstraint :: C.UseConstraint -> Infer ()
-assertUseConstraint c = do
-  s <- get
-  put $ s {useConstraints = c : useConstraints s}
-
-assertIndexConstraint :: C.IndexConstraint -> Infer ()
-assertIndexConstraint c = do
-  s <- get
-  put $ s {indexConstraints = c : indexConstraints s}
-
-assertUseCapabilityConstraint :: C.UseCapabilityConstraint -> Infer ()
-assertUseCapabilityConstraint c = do
-  s <- get
-  put $ s {useCapabilityConstraints = c : useCapabilityConstraints s}
 
 -- TODO it is assumed all variable names are unique
 

@@ -15,6 +15,7 @@ import Data.List(intercalate)
 data SimpleTypeConstraint -- c_b, STSC = Simple Type Constraint
   = STCSEqual SimpleType SimpleType
   | STCSChannelServer SimpleType [SimpleType]
+  deriving Show
 
 data TypeConstraint -- c_T, TCS = Type constraint
   = TCSEqual Type Type

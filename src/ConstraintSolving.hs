@@ -6,9 +6,11 @@ where
 import Constraints
 import Control.Monad
 import qualified Control.Monad
+import Data.Function
 import Data.Map as Map
 import qualified Data.Maybe
 import Data.Set as Set
+import Debug.Trace
 import Types
 
 -- Simple types enriched with a type that may be eihter a channel or a server
@@ -18,14 +20,20 @@ data SimpleTypeEnriched
   | STEChannel [SimpleTypeEnriched]
   | STEServ (Set IndexVar) [SimpleTypeEnriched]
   | STEChannelOrServ [SimpleTypeEnriched]
-  deriving (Show)
+  deriving (Show, Eq, Ord)
 
-data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched
+data SimpleTypeEnrichedConstraint = STECSEqual SimpleTypeEnriched SimpleTypeEnriched deriving (Eq, Ord)
+
+instance Show SimpleTypeEnrichedConstraint where
+  show (STECSEqual a b) = show a ++ " == " ++ show b
 
 solveSimpleTypeConstraints :: [SimpleTypeConstraint] -> Either String SimpleTypeSubstitution
 solveSimpleTypeConstraints constraints = do
-  let constraints' = Prelude.map liftSTConstraint constraints
-  subPairs <- getSubstitutions constraints'
+  let constraints' = Set.fromList $ Prelude.map liftSTConstraint constraints
+  let constraints'' = inferNewConstraints2 constraints' `Set.union` constraints'
+  let constraints''' = inferNewConstraints constraints'' `Set.union` constraints''
+  let constraints'''' = inferNewConstraints2 constraints''' `Set.union` constraints'''
+  subPairs <- getSubstitutions (Set.toList constraints'''')
   subs <- fromListFailable combineSimpleTypes subPairs
   let subs' = refineSubstitutions subs
   return $ Map.map unliftSTEType subs'
@@ -54,6 +62,36 @@ fromListFailable f ((k, v) : rest) = do
   case Map.lookup k rest' of
     Nothing -> return $ Map.insert k v rest'
     Just v' -> f v v' >>= \v'' -> return $ Map.insert k v'' rest'
+
+inferNewConstraints :: Set SimpleTypeEnrichedConstraint -> Set SimpleTypeEnrichedConstraint
+inferNewConstraints constraints = inferNewConstraints' (Set.toList constraints) constraints `Set.union` constraints
+
+inferNewConstraints' :: [SimpleTypeEnrichedConstraint] -> Set SimpleTypeEnrichedConstraint -> Set SimpleTypeEnrichedConstraint
+inferNewConstraints' [] _ = Set.empty
+inferNewConstraints' (c : cs) constraints = inferNewConstraints'' c (Set.delete c constraints) `Set.union` inferNewConstraints' cs (Set.delete c constraints)
+
+inferNewConstraints'' :: SimpleTypeEnrichedConstraint -> Set SimpleTypeEnrichedConstraint -> Set SimpleTypeEnrichedConstraint
+inferNewConstraints'' constraint constraints = Set.unions $ Set.map (inferNewConstraints''' constraint) constraints
+
+inferNewConstraints''' :: SimpleTypeEnrichedConstraint -> SimpleTypeEnrichedConstraint -> Set SimpleTypeEnrichedConstraint
+inferNewConstraints''' (STECSEqual t1 t2) (STECSEqual t1' t2') | t1 == t1' = inferNewConstraints'''' t2 t2'
+inferNewConstraints''' _ _ = Set.empty
+
+inferNewConstraints'''' :: SimpleTypeEnriched -> SimpleTypeEnriched -> Set SimpleTypeEnrichedConstraint
+inferNewConstraints'''' (STEVar a) t = Set.singleton $ STECSEqual (STEVar a) t
+inferNewConstraints'''' t (STEVar a) = Set.singleton $ STECSEqual (STEVar a) t
+inferNewConstraints'''' STENat STENat = Set.empty
+inferNewConstraints'''' (STEChannel t1s) (STEChannel t2s) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' (STEServ is t1s) (STEServ is' t2s) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' (STEChannelOrServ t1s) (STEChannelOrServ t2s) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' ((STEChannel t1s)) (STEChannelOrServ t2s) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' (STEChannelOrServ t1s) ((STEChannel t2s)) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' ((STEServ is t1s)) (STEChannelOrServ t2s) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' (STEChannelOrServ t1s) ((STEServ is t2s)) | length t1s == length t2s = Set.fromList $ zipWith STECSEqual t1s t2s
+inferNewConstraints'''' t1 t2 = Set.empty
+
+inferNewConstraints2 :: Set SimpleTypeEnrichedConstraint -> Set SimpleTypeEnrichedConstraint
+inferNewConstraints2 = Set.map (\(STECSEqual t1 t2) -> STECSEqual t2 t1)
 
 getSubstitutions :: [SimpleTypeEnrichedConstraint] -> Either String [(TypeVar, SimpleTypeEnriched)]
 getSubstitutions [] = return []
@@ -88,25 +126,25 @@ combineSimpleTypes :: SimpleTypeEnriched -> SimpleTypeEnriched -> Either String 
 combineSimpleTypes (STEVar a) t = return t
 combineSimpleTypes t (STEVar a) = return t
 combineSimpleTypes STENat STENat = return STENat
-combineSimpleTypes (STEChannel t1s) (STEChannel t2s) = do
+combineSimpleTypes (STEChannel t1s) (STEChannel t2s) | length t1s == length t2s = do
   ts <- zipWithM combineSimpleTypes t1s t2s
   return $ STEChannel ts
-combineSimpleTypes (STEServ is t1s) (STEServ is' t2s) = do
+combineSimpleTypes (STEServ is t1s) (STEServ is' t2s) | length t1s == length t2s = do
   ts <- zipWithM combineSimpleTypes t1s t2s
   return $ STEServ is ts
-combineSimpleTypes (STEChannelOrServ t1s) (STEChannelOrServ t2s) = do
+combineSimpleTypes (STEChannelOrServ t1s) (STEChannelOrServ t2s) | length t1s == length t2s = do
   ts <- zipWithM combineSimpleTypes t1s t2s
   return $ STEChannelOrServ ts
-combineSimpleTypes ((STEChannel t1s)) (STEChannelOrServ t2s) = do
+combineSimpleTypes ((STEChannel t1s)) (STEChannelOrServ t2s) | length t1s == length t2s = do
   ts <- forM (zip t1s t2s) $ uncurry combineSimpleTypes
   return $ STEChannel ts
-combineSimpleTypes (STEChannelOrServ t1s) ((STEChannel t2s)) = do
+combineSimpleTypes (STEChannelOrServ t1s) ((STEChannel t2s)) | length t1s == length t2s = do
   ts <- forM (zip t1s t2s) $ uncurry combineSimpleTypes
   return $ STEChannel ts
-combineSimpleTypes ((STEServ is t1s)) (STEChannelOrServ t2s) = do
+combineSimpleTypes ((STEServ is t1s)) (STEChannelOrServ t2s) | length t1s == length t2s = do
   ts <- forM (zip t1s t2s) $ uncurry combineSimpleTypes
   return $ STEServ is ts
-combineSimpleTypes (STEChannelOrServ t1s) ((STEServ is t2s)) = do
+combineSimpleTypes (STEChannelOrServ t1s) ((STEServ is t2s)) | length t1s == length t2s = do
   ts <- forM (zip t1s t2s) $ uncurry combineSimpleTypes
   return $ STEServ is ts
-combineSimpleTypes _ _ = Left "failed to combine types"
+combineSimpleTypes t1 t2 = Left $ "failed to combine types: " ++ show t1 ++ " and " ++ show t2
