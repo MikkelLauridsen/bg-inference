@@ -49,9 +49,11 @@ inferBoundVerbose ivarsPerServer env stenv p = do
           let reducedConstraints = reduceTypeConstraints cs
           putStrLn "Reduced use-constraint satisfaction problem:"
           putStrLn $ show reducedConstraints
-          let (cs', _) = solveUseConstraints reducedConstraints
+          let (cs', f) = solveUseConstraints reducedConstraints
           putStrLn "Reduced index-constraint satisfaction problem:"
           putStrLn $ show cs'
+          putStrLn "Resulting use-variable valuation:"
+          putStrLn $ show f
           res <- solveIndexConstraints $ Set.toList cs'
           case res of
             Left serr -> return $ Left serr

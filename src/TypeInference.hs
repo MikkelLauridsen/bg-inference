@@ -146,10 +146,10 @@ inferExp env@(vphi, _) senv (SuccE e) = do
 inferProc :: IndexVarConstraintEnv -> SimpleEnv -> Proc -> Infer (TypeEnv, Index)
 inferProc env senv (RestrictP a st p) = do
     (tenv, kx) <- inferProc env (senv .: (a, st)) p
-    case Map.lookup a tenv of
-        Just (TChannel sigma _ _) -> assertConstraint $ TCSUse (USCConditional [] (UCCSSubset inOut sigma))
-        Just (TServ _ _ sigma _ _) -> assertConstraint $ TCSUse (USCConditional [] (UCCSSubset inOut sigma))
-        _ -> return ()
+    --case Map.lookup a tenv of
+    --    Just (TChannel sigma _ _) -> assertConstraint $ TCSUse (USCConditional [] (UCCSSubset inOut sigma))
+    --    Just (TServ _ _ sigma _ _) -> assertConstraint $ TCSUse (USCConditional [] (UCCSSubset inOut sigma))
+    --    _ -> return ()
     return (Map.delete a tenv, kx)
 
 inferProc (vphi, _) senv NilP = freshTemplate vphi >>= (\kx -> return (Map.empty, kx))
@@ -175,7 +175,7 @@ inferProc env@(vphi, phi) senv (MatchNatP e p x q) = do
     assertConstraints $ tenv .~ tenv'
     assertConstraints $ tenv .~ tenv''
     assertConstraints $ tenv' .~ tenv''
-    case Map.lookup x (tenv' `Map.union` tenv') of
+    case Map.lookup x tenv'' of
         Just (TNat (Index (m, c)) (Index (m', c'))) -> assertConstraint $ TCSConditionalSubsumption [] env (TNat ix jx) (TNat (Index (m, COEAdd c (COENumeral 1))) (Index (m', COEAdd c' (COENumeral 1))))
         _ -> return ()
     return (Map.delete x $ tenv `Map.union` tenv' `Map.union` tenv'', kx)
@@ -199,14 +199,18 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
             (tenv, kx) <- inferProc (vphi `Set.union` is, phi) (Map.fromList (Prelude.zip vs sts) `Map.union` senv) p
             TServ ix _ gamma kx'' ts <- freshType vphi st
             kx' <- freshTemplate vphi
-            let tenv' = Map.fromList $ (a, TServ ix is gamma kx'' ts) : Prelude.zip vs ts
-            assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) (tenv' ! w) (tenv ! w) | w <- Map.keys tenv', Map.member w tenv]
-            let tenv'' = Prelude.foldr Map.delete tenv vs
-            assertConstraints $ Set.fromList [TCSInvariant env t | t <- Map.elems tenv'']
+            let tenv' = Prelude.foldr Map.delete tenv $ a : vs
+            assertConstraints $ Set.fromList [TCSInvariant env t | t <- Map.elems tenv']
             assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCIn) gamma))
             assertConstraint $ (TCSUse (USCIndex (ICSEqual kx kx'')))
             assertConstraint $ TCSUse (USCConditionalInequality [] env ix kx')
-            return ((delayEnv ix tenv'') .: (a, TServ ix is gamma kx'' ts), kx') 
+            case Map.lookup a tenv of
+                Just (TServ _ _ gamma' kx3 ts') -> do 
+                    assertConstraint $ TCSUse (USCConditional [] (UCCSSubset gamma' (UCSet $ Set.singleton UCOut)))
+                    assertConstraint $ TCSUse (USCConditionalInequality [] env kx'' kx3)
+                    assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t' t | (t, t') <- Prelude.zip ts ts']
+                _ -> return ()
+            return ((delayEnv ix tenv') .: (a, TServ ix is gamma kx'' ts), kx') 
 
 
         _ -> fail "invalid simple type; Expected server type"

@@ -11,6 +11,10 @@ import TypeInference
 import Types
 
 inferenceSpec = describe "Inference" $ do
+  it "should substitute indices for index variables" $ do
+    indexSubst (Index (Map.singleton (IndexVar 0) (COENumeral 2), COENumeral 1)) (Map.singleton (IndexVar 0) (Index (Map.empty, COENumeral 3)))
+      `shouldBe` (Index (Map.empty, COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
+
   it "should infer simple types of running example" $ do
     inferSimpleTypes 1 inferenceRunningExample
       `shouldBe` Right
@@ -57,6 +61,14 @@ inferenceSpec = describe "Inference" $ do
   it "should infer bound on simple example" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
       `shouldReturn` Right (Index (Map.empty, COENumeral 4))
+
+  it "should infer bound on simple parallel composition" $ do
+    inferBound 1 (Set.empty, Set.empty) Map.empty simpleNilTestProc
+      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
+
+  it "should infer bound on simple pattern match" $ do
+    inferBound 1 (Set.empty, Set.empty) Map.empty simpleNilTestProc'
+      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
 
   it "should infer bound on fib(3)" $ do
     inferBound 2 (Set.empty, Set.empty) Map.empty fib3
@@ -168,3 +180,12 @@ fibProc =
             (RestrictP "r'" tb3 $ RestrictP "r''" tb4 (OutputP "r'" [VarE "y"] :|: OutputP "r''" [VarE "z"] :|: InputP "r'" ["n"] (InputP "r''" ["m"] (TickP $ OutputP "add" [VarE "n", VarE "m", VarE "r"]))))
         )
     )
+
+
+simpleNilTestProc :: Proc
+simpleNilTestProc =
+  NilP :|: TickP NilP
+
+simpleNilTestProc' :: Proc
+simpleNilTestProc' =
+  MatchNatP (SuccE ZeroE) NilP "n'" $ TickP NilP
