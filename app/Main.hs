@@ -11,7 +11,7 @@ import Data.Map as Map
 
 
 main :: IO ()
-main = inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty exmptest >>= print
+main = inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample2 >>= print
 
 
 typeVars :: [TypeVar]
@@ -65,4 +65,26 @@ exmptest =
         RepInputP "seq" ["n"] $
             MatchNatP (VarE "n") NilP "n'" $
                 TickP (OutputP "seq" [VarE "n'"])
+
+
+inferenceRunningExample2 :: Proc
+inferenceRunningExample2 =
+  RestrictP "npar" tb1 $
+    RepInputP
+      "npar"
+      ["n", "r"]
+      ( MatchNatP
+          (VarE "n")
+          (OutputP "r" [])
+          "x"
+          $ RestrictP "r'" tb2 $
+            RestrictP
+              "r''"
+              tb3
+              (TickP (OutputP "r'" []
+                  :|: OutputP "npar" [VarE "x", VarE "r''"]
+                  :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" []))
+              )
+      )
+      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
                 

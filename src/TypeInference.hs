@@ -16,6 +16,7 @@ import Data.Map as Map
 import Index
 import PiCalculus
 import Types
+import Debug.Trace
 
 data InferState = InferState
   { nextCapabVar :: Int,
@@ -207,7 +208,7 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
             case Map.lookup a tenv of
                 Just (TServ _ _ gamma' kx3 ts') -> do 
                     assertConstraint $ TCSUse (USCConditional [] (UCCSSubset gamma' (UCSet $ Set.singleton UCOut)))
-                    assertConstraint $ TCSUse (USCConditionalInequality [] env kx'' kx3)
+                    assertConstraint $ TCSUse (USCConditionalInequality [] (vphi `Set.union` is, phi) kx'' kx3)
                     assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t' t | (t, t') <- Prelude.zip ts ts']
                 _ -> return ()
             return ((delayEnv ix tenv') .: (a, TServ ix is gamma kx'' ts), kx') 

@@ -15,6 +15,10 @@ inferenceSpec = describe "Inference" $ do
     indexSubst (Index (Map.singleton (IndexVar 0) (COENumeral 2), COENumeral 1)) (Map.singleton (IndexVar 0) (Index (Map.empty, COENumeral 3)))
       `shouldBe` (Index (Map.empty, COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
 
+  it "should substitute indices for index variables (2)" $ do
+    indexSubst (Index (Map.singleton (IndexVar 0) (COENumeral 2), COENumeral 1)) (Map.singleton (IndexVar 0) (Index (Map.singleton (IndexVar 0) (COENumeral 4), COENumeral 3)))
+      `shouldBe` (Index (Map.singleton (IndexVar 0) (COEMul (COENumeral 2) (COENumeral 4)), COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
+
   it "should infer simple types of running example" $ do
     inferSimpleTypes 1 inferenceRunningExample
       `shouldBe` Right
