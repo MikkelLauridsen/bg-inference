@@ -3,6 +3,7 @@ import Data.Map as Map
 import qualified Data.Set as Set
 import Engine (inferBound)
 import Index
+import Index (CoeffVar (CoeffVar))
 import IndexConstraintSolving
 import Inference
 import PiCalculus
@@ -58,30 +59,71 @@ inferenceSpec = describe "Inference" $ do
           Right (a, _, _) | a == Map.empty -> True
           _ -> False
 
+  -- a = coefficient variable, x = index variable
+  let cv_a = CoeffVar 0
+  let c_a = COEVar cv_a
+  let iv_x = IndexVar 0
+  let i_a = Index (Map.empty, c_a) -- Index: 1
+  let i_1 = Index (Map.empty, COENumeral 1) -- Index: 1
+  let i_2 = Index (Map.empty, COENumeral 2) -- Index: 2
+  let i_3 = Index (Map.empty, COENumeral 3) -- Index: 3
+  let i_4 = Index (Map.empty, COENumeral 4) -- Index: 4
+  let i_1p1 = Index (Map.empty, COEAdd (COENumeral 1) (COENumeral 1)) -- Index: 1 + 1
+  let i_1x = Index (Map.singleton iv_x (COENumeral 1), COENumeral 0) -- Index: 1 * x
+  let i_2x = Index (Map.singleton iv_x (COENumeral 2), COENumeral 0) -- Index: 2 * x
+  let i_3x = Index (Map.singleton iv_x (COENumeral 3), COENumeral 0) -- Index: 3 * x
+  let i_ax = Index (Map.singleton iv_x c_a, COENumeral 0) -- Index: a * x
+  let i_2xp1 = Index (Map.singleton iv_x (COENumeral 2), COENumeral 1) -- Index: 2 * x + 1
+  let i_3xp4 = Index (Map.singleton iv_x (COENumeral 3), COENumeral 4) -- Index: 3 * x + 4
+  let i_2xp4 = Index (Map.singleton iv_x (COENumeral 2), COENumeral 4) -- Index: 2 * x + 4
+  let i_3xp1 = Index (Map.singleton iv_x (COENumeral 3), COENumeral 1) -- Index: 3 * x + 1
+  let i_3xpa = Index (Map.singleton iv_x (COENumeral 3), c_a) -- Index: 3 * x + 1
+  
   it "should infer bound on simple example" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
-      `shouldReturn` Right (Index (Map.empty, COENumeral 4))
+      `shouldReturn` Right i_4
 
   it "should infer bound on simple parallel composition" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleNilTestProc
-      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
+      `shouldReturn` Right i_1
 
   it "should infer bound on simple pattern match" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleNilTestProc'
-      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
+      `shouldReturn` Right i_1
 
   it "should infer bound on fib(3)" $ do
     inferBound 2 (Set.empty, Set.empty) Map.empty fib3
-      `shouldReturn` Right (Index (Map.empty, COENumeral 3))
+      `shouldReturn` Right i_3
 
   it "should infer bound on running example" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
-      `shouldReturn` Right (Index (Map.empty, COENumeral 1))
+      `shouldReturn` Right i_1
 
   it "should check index constraint 2 = 2" $ do
-    solveIndexConstraints [ICSEqual (Index (Map.empty, COENumeral 2)) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right Map.empty
-  it "should check index constraint x = 2" $ do
-    solveIndexConstraints [ICSEqual (Index (Map.empty, COEVar (CoeffVar 0))) (Index (Map.empty, COENumeral 2))] `shouldReturn` Right (Map.fromList [(CoeffVar 0, 2)])
+    solveIndexConstraints [ICSEqual i_2 i_2] `shouldReturn` Right Map.empty
+  it "should check index constraint 1 + 1 = 2" $ do
+    solveIndexConstraints [ICSEqual i_1p1 i_2] `shouldReturn` Right Map.empty
+  it "should check index constraint a = 2" $ do
+    solveIndexConstraints [ICSEqual i_a i_2]
+      `shouldReturn` Right (Map.singleton cv_a 2)
+  it "should check index constraint 2x + 0 = ax + 0" $ do
+    solveIndexConstraints [ICSEqual i_2x i_ax]
+      `shouldReturn` Right (Map.singleton cv_a 2)
+  it "should check index constraint 2x + 1 <= 3x + 4" $ do
+    solveIndexConstraints [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xp4]
+      `shouldReturn` Right Map.empty
+  it "should check and fail index constraint 2x + 4 <= 3x + 1" $ do
+    solveIndexConstraints [ICSLessEq (Set.empty, Set.empty) i_2xp4 i_3xp1]
+      `shouldReturn` Left "Unsatisfiable"
+  it "should check and fail index constraints 2x = 3, 3x = 4" $ do
+    solveIndexConstraints
+      [ ICSEqual i_2x i_3,
+        ICSEqual i_3x i_4
+      ]
+      `shouldReturn` Left "Unsatisfiable"
+  it "should check index constraint 2x + 1 <= 3x + a" $ do
+    solveIndexConstraints [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xpa]
+      `shouldReturn` Right (Map.singleton cv_a 1)
 
 main :: IO ()
 main = do
@@ -180,7 +222,6 @@ fibProc =
             (RestrictP "r'" tb3 $ RestrictP "r''" tb4 (OutputP "r'" [VarE "y"] :|: OutputP "r''" [VarE "z"] :|: InputP "r'" ["n"] (InputP "r''" ["m"] (TickP $ OutputP "add" [VarE "n", VarE "m", VarE "r"]))))
         )
     )
-
 
 simpleNilTestProc :: Proc
 simpleNilTestProc =
