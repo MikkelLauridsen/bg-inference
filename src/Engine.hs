@@ -7,6 +7,7 @@ where
 import ConstraintReduction
 import Constraints
 import Data.Set as Set
+import Data.Map as Map
 import Index
 import IndexConstraintSolving
 import Inference
@@ -61,4 +62,6 @@ inferBoundVerbose ivarsPerServer env stenv p = do
               putStrLn $ show substI
               putStrLn "Resulting complexity bound:"
               putStrLn $ show (applyISubst substI kx)
+              putStrLn "Resulting (APPLIED) type context:"
+              putStrLn $ show (Map.map (applyUseValuation f . applyISubstType substI) tenv)
               return $ Right (applyISubst substI kx)

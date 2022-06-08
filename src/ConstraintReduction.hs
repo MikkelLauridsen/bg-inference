@@ -1,6 +1,6 @@
 module ConstraintReduction 
 ( reduceTypeConstraints
-, solveUseConstraints  
+, solveUseConstraints
 ) where
 
 import Free
@@ -9,9 +9,6 @@ import Index
 import Constraints
 import Data.Set as Set
 import Data.Map as Map
-
-
-type UseValuation = Map CapabVar (Set UseCapabilityType)
 
 
 reduceTypeConstraints :: Set TypeConstraint -> Set UseConstraint

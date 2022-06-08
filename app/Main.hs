@@ -71,7 +71,7 @@ exmptest' =
     (RepInputP "seq" ["n"] $
         MatchNatP (VarE "n") NilP "n'" $
             TickP (OutputP "seq" [VarE "n'"]))
-            :|: (OutputP "seq" [natExp 5])
+           -- :|: (OutputP "seq" [natExp 5])
 
 
 

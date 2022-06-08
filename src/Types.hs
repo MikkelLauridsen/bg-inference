@@ -9,6 +9,9 @@ module Types
     UseCapability (..),
     SimpleTypeSubstitution,
     typeSubst,
+    applyISubstType,
+    applyUseValuation,
+    UseValuation
   )
 where
 
@@ -18,6 +21,9 @@ import qualified Data.Map as Map
 import Data.Maybe
 import Data.Set as Set
 import Index
+
+
+type UseValuation = Map CapabVar (Set UseCapabilityType)
 
 newtype CapabVar = CapabVar Int deriving (Eq, Ord)
 
@@ -70,3 +76,16 @@ typeSubst subst (TChannel sigma ix ts) = TChannel sigma (indexSubst ix subst) $ 
 typeSubst subst (TServ ix is sigma kx ts) = TServ (indexSubst ix subst) is sigma (indexSubst kx subst') $ Prelude.map (typeSubst subst') ts
   where
     subst' = Set.foldr Map.delete subst is
+
+applyISubstType :: Map CoeffVar Integer -> Type -> Type
+applyISubstType substI (TNat ix jx) = TNat (applyISubst substI ix) (applyISubst substI jx)
+applyISubstType substI (TChannel sigma ix ts) = TChannel sigma (applyISubst substI ix) $ Prelude.map (applyISubstType substI) ts
+applyISubstType substI (TServ ix is sigma kx ts) = TServ (applyISubst substI ix) is sigma (applyISubst substI kx) $ Prelude.map (applyISubstType substI) ts
+
+
+applyUseValuation :: UseValuation -> Type -> Type
+applyUseValuation _ t@(TNat _ _) = t
+applyUseValuation f (TChannel (UCVar gamma) ix ts) | gamma `Map.member` f = TChannel (UCSet $ f ! gamma) ix $ Prelude.map (applyUseValuation f) ts
+applyUseValuation f (TChannel sigma ix ts) = TChannel sigma ix $ Prelude.map (applyUseValuation f) ts
+applyUseValuation f (TServ ix is (UCVar gamma) kx ts) | gamma `Map.member` f = TServ ix is (UCSet $ f ! gamma) kx $ Prelude.map (applyUseValuation f) ts
+applyUseValuation f (TServ ix is sigma kx ts) = TServ ix is sigma kx $ Prelude.map (applyUseValuation f) ts
