@@ -12,6 +12,7 @@ import qualified Data.Maybe
 import Data.Set as Set
 import Debug.Trace
 import Types
+import PiCalculus
 
 -- Simple types enriched with a type that may be eihter a channel or a server
 data SimpleTypeEnriched

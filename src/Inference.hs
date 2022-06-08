@@ -15,9 +15,11 @@ import qualified Data.Map as Map
 import Data.Set as Set (Set, fromList, empty)
 import Control.Monad (mapM)
 import Data.Maybe
+import Data.Set as Set (Set, fromList)
 import Debug.Trace
 import Index
 import PiCalculus
+import TypeInference
 import Types
 
 data InferState = InferState
@@ -55,10 +57,11 @@ runInfer ivarsPerServer m = case evalStateT m (defaultState ivarsPerServer) of
   where
     showBindings bindings = "\n" ++ Prelude.foldr (\(var, t) acc -> "  " ++ var ++ " : " ++ t ++ "\n" ++ acc) "" bindings
 
-inferSimpleTypes :: Int -> Proc -> Either String SimpleTypeSubstitution
-inferSimpleTypes ivarsPerServer p =
+inferSimpleTypes :: Int -> SimpleEnv -> Proc -> Either String SimpleTypeSubstitution
+inferSimpleTypes ivarsPerServer stenv p =
   runInfer ivarsPerServer $ do
-    updateTvarCount p
+    updateTvarCount stenv p
+    forM_ (Map.assocs stenv) (uncurry updateSimpleType)
     inferSimpleConstraintTypes p
     simpleTypeContext <- gets simpleTypeContext
     solveSimpleTypeConstraints >>= inferIndexVariables
@@ -136,9 +139,9 @@ maxTvar (RepInputP _ _ p) = maxTvar p
 maxTvar (RestrictP _ t p) = max (maxTvar p) (maxTvarTyp t)
 maxTvar (MatchNatP _ p1 _ p2) = max (maxTvar p1) (maxTvar p2)
 
-updateTvarCount :: Proc -> Infer ()
-updateTvarCount p =
-  let count = maxTvar p + 1
+updateTvarCount :: SimpleEnv -> Proc -> Infer ()
+updateTvarCount stenv p =
+  let count = maximum ((maxTvar p + 1) : Prelude.map maxTvarTyp (Map.elems stenv))
    in modify $ \s -> s {tvarCount = count}
 
 assertSimpleTypeConstraint :: C.SimpleTypeConstraint -> Infer ()
@@ -196,6 +199,3 @@ inferSimpleConstraintTypes (MatchNatP e p1 v p2) = inContext "MatchNatP" [] $ do
   inferSimpleConstraintTypes p1
   updateSimpleType v (STVar ntv)
   inferSimpleConstraintTypes p2
-
-
-
