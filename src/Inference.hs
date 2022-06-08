@@ -12,7 +12,7 @@ import Control.Exception
 import Control.Monad.Except
 import Control.Monad.State.Lazy
 import qualified Data.Map as Map
-import Data.Set as Set (Set, fromList, empty)
+import Data.Set as Set (Set, fromList, empty, null, findMax)
 import Control.Monad (mapM)
 import Data.Maybe
 import Data.Set as Set (Set, fromList)
@@ -34,13 +34,13 @@ data InferState = InferState
 type Infer a = StateT InferState (Either (InferState, String)) a
 
 instance MonadFail (Either (InferState, String)) where
-  fail s = Left (defaultState 0, s)
+  fail s = Left (defaultState 0 0, s)
 
-defaultState :: Int -> InferState
-defaultState = InferState 0 0 [] [] Map.empty
+defaultState :: Int -> Int -> InferState
+defaultState ivarsPerServer nextIndexVar = InferState 0 nextIndexVar [] [] Map.empty ivarsPerServer
 
-runInfer :: Int -> Infer a -> Either String a
-runInfer ivarsPerServer m = case evalStateT m (defaultState ivarsPerServer) of
+runInfer :: Int -> Int -> Infer a -> Either String a
+runInfer ivarsPerServer nextIndexVar m = case evalStateT m (defaultState ivarsPerServer nextIndexVar) of
   Left (InferState _ _ s _ _ _, msg) ->
     Left $
       "Error during process check: " ++ msg ++ "\n"
@@ -57,9 +57,15 @@ runInfer ivarsPerServer m = case evalStateT m (defaultState ivarsPerServer) of
   where
     showBindings bindings = "\n" ++ Prelude.foldr (\(var, t) acc -> "  " ++ var ++ " : " ++ t ++ "\n" ++ acc) "" bindings
 
+nextIndexVar :: Map.Map Var SimpleType -> Int
+nextIndexVar stenv = 1 + Map.foldr (max . maxTypeIndexVar) 0 stenv
+  where
+    maxTypeIndexVar (STServ is _) = let IndexVar n = Set.findMax is in n
+    maxTypeIndexVar _ = 0
+
 inferSimpleTypes :: Int -> SimpleEnv -> Proc -> Either String SimpleTypeSubstitution
 inferSimpleTypes ivarsPerServer stenv p =
-  runInfer ivarsPerServer $ do
+  runInfer ivarsPerServer (nextIndexVar stenv) $ do
     updateTvarCount stenv p
     forM_ (Map.assocs stenv) (uncurry updateSimpleType)
     inferSimpleConstraintTypes p
@@ -82,7 +88,8 @@ returnError msg = do
 inferIndexVariables :: SimpleTypeSubstitution -> Infer SimpleTypeSubstitution
 inferIndexVariables = mapM $ \st ->
     case st of
-      (STServ _ sts) -> freshServerIvars (Prelude.foldr ((+) . countIvars) 0 sts) >>= (\ixs -> return $ STServ ixs sts)
+      (STServ is sts) | Set.null is -> freshServerIvars (Prelude.foldr ((+) . countIvars) 0 sts) >>= (\is -> return $ STServ is sts)
+                      | otherwise -> return $ STServ is sts
       _ -> return st
   where
     countIvars STNat = 2
@@ -182,11 +189,12 @@ inferSimpleConstraintTypes (OutputP v es) = inContext "OutputP" [] $ do
 inferSimpleConstraintTypes (RepInputP a vs p) = inContext "RepInputP" [] $ do
   t <- lookupSimpleType a
   ts <- forM vs $ \v -> do
-    t <- freshTvar
-    updateSimpleType v (STVar t)
-    return t
-  -- ixs <- freshServerIvars
-  assertSimpleTypeConstraint $ C.STCSEqual t (STServ Set.empty (map STVar ts))
+    s <- freshTvar
+    updateSimpleType v (STVar s)
+    return s
+  case t of
+    STServ is _ -> assertSimpleTypeConstraint $ C.STCSEqual t (STServ is (map STVar ts))
+    _ -> assertSimpleTypeConstraint $ C.STCSEqual t (STServ Set.empty (map STVar ts))
   inferSimpleConstraintTypes p
 inferSimpleConstraintTypes (RestrictP v t p) = inContext "RestrictP" [] $ do
   updateSimpleType v t

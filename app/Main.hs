@@ -11,7 +11,7 @@ import Data.Map as Map
 
 
 main :: IO ()
-main = inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty exmptest' >>= print
+main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat]) exmptest' >>= print
 
 
 typeVars :: [TypeVar]
@@ -68,11 +68,10 @@ exmptest =
 
 exmptest' :: Proc
 exmptest' =
-    RestrictP "seq" tb1 $
-        (RepInputP "seq" ["n"] $
-            MatchNatP (VarE "n") NilP "n'" $
-                TickP (OutputP "seq" [VarE "n'"]))
-                :|: (OutputP "seq" [natExp 5])
+    (RepInputP "seq" ["n"] $
+        MatchNatP (VarE "n") NilP "n'" $
+            TickP (OutputP "seq" [VarE "n'"]))
+            :|: (OutputP "seq" [natExp 5])
 
 
 
