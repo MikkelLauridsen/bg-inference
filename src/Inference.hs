@@ -12,7 +12,8 @@ import Control.Exception
 import Control.Monad.Except
 import Control.Monad.State.Lazy
 import qualified Data.Map as Map
-import Data.Set as Set (Set, fromList)
+import Data.Set as Set (Set, fromList, empty)
+import Control.Monad (mapM)
 import Data.Maybe
 import Debug.Trace
 import Index
@@ -60,7 +61,7 @@ inferSimpleTypes ivarsPerServer p =
     updateTvarCount p
     inferSimpleConstraintTypes p
     simpleTypeContext <- gets simpleTypeContext
-    solveSimpleTypeConstraints
+    solveSimpleTypeConstraints >>= inferIndexVariables
 
 solveSimpleTypeConstraints :: Infer SimpleTypeSubstitution
 solveSimpleTypeConstraints = do
@@ -74,6 +75,15 @@ returnError :: String -> Infer a
 returnError msg = do
   s <- get
   throwError (s, msg)
+
+inferIndexVariables :: SimpleTypeSubstitution -> Infer SimpleTypeSubstitution
+inferIndexVariables = mapM $ \st ->
+    case st of
+      (STServ _ sts) -> freshServerIvars (Prelude.foldr ((+) . countIvars) 0 sts) >>= (\ixs -> return $ STServ ixs sts)
+      _ -> return st
+  where
+    countIvars STNat = 2
+    countIvars _ = 0
 
 inContext :: String -> [(String, String)] -> Infer a -> Infer a
 inContext name bindings action = do
@@ -94,10 +104,9 @@ freshIvar = do
   modify $ \s -> s {ivarCount = count + 1}
   return $ IndexVar count
 
-freshServerIvars :: Infer (Set IndexVar)
-freshServerIvars = do
+freshServerIvars :: Int -> Infer (Set IndexVar)
+freshServerIvars num = do
   count <- gets ivarCount
-  num <- gets ivarsPerServer
   modify $ \s -> s {ivarCount = count + 1}
   return $ Set.fromList (Prelude.map IndexVar [count .. count + num - 1])
 
@@ -167,14 +176,14 @@ inferSimpleConstraintTypes (OutputP v es) = inContext "OutputP" [] $ do
   t <- lookupSimpleType v
   ts <- mapM inferExpSimpleType es
   assertSimpleTypeConstraint $ C.STCSChannelServer t ts
-inferSimpleConstraintTypes (RepInputP v vs p) = inContext "RepInputP" [] $ do
-  t <- lookupSimpleType v
+inferSimpleConstraintTypes (RepInputP a vs p) = inContext "RepInputP" [] $ do
+  t <- lookupSimpleType a
   ts <- forM vs $ \v -> do
     t <- freshTvar
     updateSimpleType v (STVar t)
     return t
-  ixs <- freshServerIvars
-  assertSimpleTypeConstraint $ C.STCSEqual t (STServ ixs (map STVar ts))
+  -- ixs <- freshServerIvars
+  assertSimpleTypeConstraint $ C.STCSEqual t (STServ Set.empty (map STVar ts))
   inferSimpleConstraintTypes p
 inferSimpleConstraintTypes (RestrictP v t p) = inContext "RestrictP" [] $ do
   updateSimpleType v t
@@ -187,5 +196,6 @@ inferSimpleConstraintTypes (MatchNatP e p1 v p2) = inContext "MatchNatP" [] $ do
   inferSimpleConstraintTypes p1
   updateSimpleType v (STVar ntv)
   inferSimpleConstraintTypes p2
+
 
 

@@ -95,8 +95,8 @@ inferenceSpec = describe "Inference" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleNilTestProc'
       `shouldReturn` Right i_1
 
-  it "should infer bound on fib(3)" $ do
-    inferBound 2 (Set.empty, Set.empty) Map.empty fib3
+  it "should infer bound on fib()" $ do
+    inferBound 2 (Set.empty, Set.empty) Map.empty (RestrictP "add" tb1 $ RestrictP "fib" tb2 fibProc)
       `shouldReturn` Right i_3
 
   it "should infer bound on running example" $ do
