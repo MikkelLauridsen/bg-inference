@@ -11,6 +11,7 @@ import Control.Exception
 import Control.Monad.Except
 import Control.Monad.State
 import Control.Monad (when, mapM)
+import Control.Monad.Extra (ifM)
 import Data.Set as Set
 import Data.Map as Map
 import Index
@@ -21,20 +22,22 @@ import Debug.Trace
 data InferState = InferState
   { nextCapabVar :: Int,
     nextCoeffVar :: Int,
-    typeConstraints :: Set TypeConstraint
+    typeConstraints :: Set TypeConstraint,
+    isTimeInvariant :: Bool,
+    withLowerBound :: Bool
   }
 
 type Infer a = StateT InferState (Either (InferState, String)) a
 
 instance MonadFail (Either (InferState, String)) where
-  fail serr = Left (initState, serr)
+  fail serr = Left (initState False, serr)
 
 type SimpleEnv = Map Var SimpleType
 
 type TypeEnv = Map Var Type
 
 
-initState = InferState { nextCapabVar = 0, nextCoeffVar = 0, typeConstraints = Set.empty }
+initState b = InferState { nextCapabVar = 0, nextCoeffVar = 0, typeConstraints = Set.empty, isTimeInvariant = False, withLowerBound = b }
 
 
 (.:) :: (Ord k) => Map k v -> (k, v) -> Map k v
@@ -82,13 +85,17 @@ freshType vphi (STServ is sts) = do
     gamma <- freshCapabVar
     ix <- freshTemplate vphi
     kx <- freshTemplate $ vphi `Set.union` is
-    (ts, _) <- Prelude.foldr freshMessageType (return ([], Set.toList is)) sts
+    s <- get
+    (ts, _) <- Prelude.foldr (freshMessageType (withLowerBound s)) (return ([], Set.toList is)) sts
     return $ TServ ix is (UCVar gamma) kx ts
     where
-        freshMessageType STNat curr = do 
+        freshMessageType True STNat curr = do 
             (ss, i : j : js') <- curr
             return (TNat (Index (Map.singleton i (COENumeral 1), COENumeral 0)) (Index (Map.singleton j (COENumeral 1), COENumeral 0)) : ss, js')
-        freshMessageType st curr = do 
+        freshMessageType False STNat curr = do 
+            (ss, i : js') <- curr
+            return (TNat (Index (Map.empty, COENumeral 0)) (Index (Map.singleton i (COENumeral 1), COENumeral 0)) : ss, js')
+        freshMessageType _ st curr = do 
             (ss, js) <- curr
             t <- freshType (vphi `Set.union` is) st
             return (t : ss, js)
@@ -130,9 +137,9 @@ delayEnv :: Index -> TypeEnv -> TypeEnv
 delayEnv jx = Map.map (delay jx)
 
 
-inferTypes :: IndexVarConstraintEnv -> SimpleEnv -> Proc -> Either String (TypeEnv, Set TypeConstraint, Index)
-inferTypes env senv p =
-    case runStateT (inferProc env senv p >>= \(tenv, kx) -> assertConstraint (TCSUse (USCConditionalInequality [] env zeroIndex kx)) >> return (tenv, kx)) initState of
+inferTypes :: Bool -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> Either String (TypeEnv, Set TypeConstraint, Index)
+inferTypes withLowerBound env senv p =
+    case runStateT (inferProc env senv p >>= \(tenv, kx) -> assertConstraint (TCSUse (USCConditionalInequality [] env zeroIndex kx)) >> return (tenv, kx)) (initState withLowerBound) of
         Left (_, serr) -> Left serr
         Right ((tenv, kx), s) -> Right (tenv, typeConstraints s, kx)
 
@@ -207,7 +214,7 @@ inferProc env@(vphi, phi) senv (MatchNatP e p x q) = do
     assertConstraints $ tenv .~ tenv''
     assertConstraints $ tenv' .~ tenv''
     case Map.lookup x tenv'' of
-        Just (TNat (Index (m, c)) (Index (m', c'))) -> assertConstraint $ TCSConditionalSubsumption [] env (TNat ix jx) (TNat (Index (m, COEAdd c (COENumeral 1))) (Index (m', COEAdd c' (COENumeral 1))))
+        Just (TNat (Index (m, c)) (Index (m', c'))) -> assertConstraint $ TCSConditionalSubsumption [] env (TNat ix jx) (TNat zeroIndex (Index (m', COEAdd c' (COENumeral 1)))) -- only zeroIndex if no lowerbound..
         _ -> return ()
     return (Map.delete x $ tenv `Map.union` tenv' `Map.union` tenv'', kx)
 
@@ -228,18 +235,19 @@ inferProc env@(vphi, _) senv (InputP a vs p) =
 inferProc env@(vphi, phi) senv (RepInputP a vs p) =
     case Map.lookup a senv of
         Just st@(STServ is sts) -> do
+            setTimeInvariance True
             (tenv, kx) <- inferProc (vphi `Set.union` is, phi) (Map.fromList (Prelude.zip vs sts) `Map.union` senv) p
+            setTimeInvariance False
             TServ ix _ gamma kx'' ts <- freshType vphi st
             kx' <- freshTemplate vphi
-            let tenv' = Prelude.foldr Map.delete tenv $ a : vs
+            let tenv' = Prelude.foldr Map.delete tenv vs
             assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex ix)
             assertConstraints $ Set.fromList [TCSInvariant env t | t <- Map.elems tenv']
             assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCIn) gamma))
-            assertConstraint $ (TCSUse (USCIndex (ICSEqual kx kx'')))
+            assertConstraint $ TCSUse (USCIndex (ICSEqual kx kx''))
             assertConstraint $ TCSUse (USCConditionalInequality [] env ix kx')
             case Map.lookup a tenv of
                 Just (TServ _ _ gamma' kx3 ts') -> do 
-                    assertConstraint $ TCSUse (USCConditional [] (UCCSSubset gamma' (UCSet $ Set.singleton UCOut)))
                     assertConstraint $ TCSUse (USCConditionalInequality [] (vphi `Set.union` is, phi) kx'' kx3)
                     assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t' t | (t, t') <- Prelude.zip ts ts']
                 _ -> return ()
@@ -265,19 +273,31 @@ inferProc env@(vphi, _) senv (OutputP a es) = do
         Just st@(STServ is sts) -> do
             TServ ix is gamma kx' ts <- freshType vphi st
             kx <- freshTemplate vphi
-            jxs <- sequence [freshTemplate vphi | _ <- [0 .. Set.size is - 1]]
             ss' <- mapM (freshType vphi) sts
-            let subst = instantiate (Set.toList is) ts ss' 
+            s <- get
+            let subst = instantiate (withLowerBound s) (Set.toList is) ts ss' 
             assertConstraints $ Set.fromList [TCSConditionalSubsumption [] env s s' | (s, s') <- Prelude.zip ss ss']
             assertConstraints $ Set.fromList [TCSEqual s' (typeSubst subst t) | (s', t) <- Prelude.zip ss' ts]
             assertConstraint $ TCSUse (USCConditionalInequality [] env (ix .+ indexSubst kx' subst) kx)
             assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCOut) gamma))
+            assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex kx')
+            ifM isTimeInvariantM
+                (assertConstraint $ TCSUse (USCIndex (ICSEqual zeroIndex ix)))
+                (assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex ix))
             return ((delayEnv ix $ Prelude.foldr Map.union Map.empty tenvs) .: (a, TServ ix is gamma kx' ts), kx)
         
         _ -> fail "invalid simple type; Expected channel type or server type"
 
 
-instantiate :: [IndexVar] -> [Type] -> [Type] -> Map IndexVar Index
-instantiate (i : j : is') ((TNat _ _) : ts') ((TNat ix jx) : ss') = Map.fromList [(i, ix), (j, jx)] `Map.union` instantiate is' ts' ss'
-instantiate is (t : ts') (s : ss') = instantiate is ts' ss'
-instantiate [] [] [] = Map.empty
+instantiate :: Bool -> [IndexVar] -> [Type] -> [Type] -> Map IndexVar Index
+instantiate True (i : j : is') ((TNat _ _) : ts') ((TNat ix jx) : ss') = Map.fromList [(i, ix), (j, jx)] `Map.union` instantiate True is' ts' ss'
+instantiate False (i : is') ((TNat _ _) : ts') ((TNat _ jx) : ss') = Map.singleton i jx `Map.union` instantiate False is' ts' ss'
+instantiate b is (t : ts') (s : ss') = instantiate b is ts' ss'
+instantiate _ [] [] [] = Map.empty
+
+
+isTimeInvariantM :: Infer Bool
+isTimeInvariantM = get >>= return . isTimeInvariant
+
+setTimeInvariance :: Bool -> Infer ()
+setTimeInvariance b = get >>= (\s -> put $ s{ isTimeInvariant = b })

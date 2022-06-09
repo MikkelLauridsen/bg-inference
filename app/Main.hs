@@ -11,7 +11,7 @@ import Data.Map as Map
 
 
 main :: IO ()
-main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat]) exmptest' >>= print
+main = inferBoundVerbose 1 False (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) inferenceRunningExample >>= print
 
 
 typeVars :: [TypeVar]

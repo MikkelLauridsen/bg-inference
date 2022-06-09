@@ -28,20 +28,21 @@ data InferState = InferState
     stack :: [(String, [(String, String)])],
     simpleTypeConstraints :: [C.SimpleTypeConstraint],
     simpleTypeContext :: Map.Map Var SimpleType, -- Maps
-    ivarsPerServer :: Int
+    ivarsPerServer :: Int,
+    withLowerBound :: Bool
   }
 
 type Infer a = StateT InferState (Either (InferState, String)) a
 
 instance MonadFail (Either (InferState, String)) where
-  fail s = Left (defaultState 0 0, s)
+  fail s = Left (defaultState 0 0 False, s)
 
-defaultState :: Int -> Int -> InferState
-defaultState ivarsPerServer nextIndexVar = InferState 0 nextIndexVar [] [] Map.empty ivarsPerServer
+defaultState :: Int -> Int -> Bool -> InferState
+defaultState ivarsPerServer nextIndexVar withLowerBound = InferState 0 nextIndexVar [] [] Map.empty ivarsPerServer withLowerBound
 
-runInfer :: Int -> Int -> Infer a -> Either String a
-runInfer ivarsPerServer nextIndexVar m = case evalStateT m (defaultState ivarsPerServer nextIndexVar) of
-  Left (InferState _ _ s _ _ _, msg) ->
+runInfer :: Int -> Int -> Bool -> Infer a -> Either String a
+runInfer ivarsPerServer nextIndexVar withLowerBound m = case evalStateT m (defaultState ivarsPerServer nextIndexVar withLowerBound) of
+  Left (InferState _ _ s _ _ _ _, msg) ->
     Left $
       "Error during process check: " ++ msg ++ "\n"
         ++ "StackTrace: "
@@ -63,9 +64,9 @@ nextIndexVar stenv = 1 + Map.foldr (max . maxTypeIndexVar) 0 stenv
     maxTypeIndexVar (STServ is _) = let IndexVar n = Set.findMax is in n
     maxTypeIndexVar _ = 0
 
-inferSimpleTypes :: Int -> SimpleEnv -> Proc -> Either String SimpleTypeSubstitution
-inferSimpleTypes ivarsPerServer stenv p =
-  runInfer ivarsPerServer (nextIndexVar stenv) $ do
+inferSimpleTypes :: Int -> Bool -> SimpleEnv -> Proc -> Either String SimpleTypeSubstitution
+inferSimpleTypes ivarsPerServer withLowerBound stenv p =
+  runInfer ivarsPerServer (nextIndexVar stenv) withLowerBound $ do
     updateTvarCount stenv p
     forM_ (Map.assocs stenv) (uncurry updateSimpleType)
     inferSimpleConstraintTypes p
@@ -86,14 +87,16 @@ returnError msg = do
   throwError (s, msg)
 
 inferIndexVariables :: SimpleTypeSubstitution -> Infer SimpleTypeSubstitution
-inferIndexVariables = mapM $ \st ->
+inferIndexVariables stSubst = do
+  s <- get
+  let countIvars STNat | withLowerBound s = 2
+                       | otherwise = 1
+      countIvars _ = 0
+  mapM (\st ->
     case st of
       (STServ is sts) | Set.null is -> freshServerIvars (Prelude.foldr ((+) . countIvars) 0 sts) >>= (\is -> return $ STServ is sts)
                       | otherwise -> return $ STServ is sts
-      _ -> return st
-  where
-    countIvars STNat = 2
-    countIvars _ = 0
+      _ -> return st) stSubst
 
 inContext :: String -> [(String, String)] -> Infer a -> Infer a
 inContext name bindings action = do
