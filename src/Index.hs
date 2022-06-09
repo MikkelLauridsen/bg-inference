@@ -25,6 +25,7 @@ data Coefficient
   | COENumeral Integer
   | COEAdd Coefficient Coefficient 
   | COEMul Coefficient Coefficient 
+  | COESub Coefficient Coefficient
   deriving (Ord, Eq)
 
 newtype Index = Index (Map IndexVar Coefficient, Coefficient) deriving (Ord, Eq)
@@ -55,6 +56,7 @@ instance Show Coefficient where
   show (COENumeral n) = "(" ++ show n ++ ")"
   show (COEAdd c c') = "(" ++ show c ++ "+" ++ show c' ++ ")"
   show (COEMul c c') = show c ++ show c'
+  show (COESub c c') = "(" ++ show c ++ "-" ++ show c' ++ ")"
 
 
 instance Show Index where
