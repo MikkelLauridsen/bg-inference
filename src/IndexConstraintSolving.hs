@@ -82,7 +82,7 @@ coefficientToZ3 :: Coefficient -> Z3 (AST, [(CoeffVar, AST)])
 coefficientToZ3 (COEVar v) = do
   var <- coefficientVarToZ3 v
   _0 <- mkIntNum 0
-  optimizeAssert =<< mkGe var _0
+  --optimizeAssert =<< mkGe var _0
   return (var, [(v, var)])
 coefficientToZ3 (COENumeral n) = do
   ast <- mkIntNum n

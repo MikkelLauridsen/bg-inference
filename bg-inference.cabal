@@ -47,7 +47,8 @@ library
       containers,
       multiset,
       mtl,
-      z3
+      z3,
+      extra
   default-language: Haskell2010
 
 executable bg-inference-exe

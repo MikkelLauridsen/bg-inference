@@ -21,7 +21,7 @@ inferenceSpec = describe "Inference" $ do
       `shouldBe` (Index (Map.singleton (IndexVar 0) (COEMul (COENumeral 2) (COENumeral 4)), COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
 
   it "should infer simple types of running example" $ do
-    inferSimpleTypes 1 inferenceRunningExample
+    inferSimpleTypes 1 Map.empty inferenceRunningExample
       `shouldBe` Right
         ( Map.fromList
             [ (b1, STServ (Set.singleton (IndexVar 0)) [STNat, STChannel []]),
@@ -35,7 +35,7 @@ inferenceSpec = describe "Inference" $ do
         )
 
   it "should infer simple types of fib(3)" $ do
-    inferSimpleTypes 2 fib3
+    inferSimpleTypes 2 Map.empty fib3
       `shouldBe` Right
         ( Map.fromList
             [ (0, STServ (Set.fromList [i1, i2]) [STNat, STNat, STChannel [STNat]]),
@@ -95,8 +95,8 @@ inferenceSpec = describe "Inference" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleNilTestProc'
       `shouldReturn` Right i_1
 
-  it "should infer bound on fib(3)" $ do
-    inferBound 2 (Set.empty, Set.empty) Map.empty fib3
+  it "should infer bound on fib()" $ do
+    inferBound 2 (Set.empty, Set.empty) Map.empty (RestrictP "add" tb1 $ RestrictP "fib" tb2 fibProc)
       `shouldReturn` Right i_3
 
   it "should infer bound on running example" $ do

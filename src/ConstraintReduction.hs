@@ -1,6 +1,6 @@
 module ConstraintReduction 
 ( reduceTypeConstraints
-, solveUseConstraints  
+, solveUseConstraints
 ) where
 
 import Free
@@ -9,9 +9,6 @@ import Index
 import Constraints
 import Data.Set as Set
 import Data.Map as Map
-
-
-type UseValuation = Map CapabVar (Set UseCapabilityType)
 
 
 reduceTypeConstraints :: Set TypeConstraint -> Set UseConstraint
@@ -35,9 +32,9 @@ reduceTypeConstraints tcs = aux (tcs, Set.empty)
 
         reduceTypeConstraint (TCSInvariant env (TNat _ _)) (tcs', ucs') = (tcs', ucs')
         reduceTypeConstraint (TCSInvariant env (TChannel _ _ _)) (tcs', ucs') = (Set.empty, Set.singleton (USCIndex ICSFalse))
-        reduceTypeConstraint (TCSInvariant env@(vphi, _) (TServ ix _ sigma _ _)) (tcs', ucs') = (tcs', ucs' `Set.union` ucs'')
+        reduceTypeConstraint (TCSInvariant env@(vphi, _) (TServ _ _ sigma _ _)) (tcs', ucs') = (tcs', ucs' `Set.union` ucs'')
             where
-                ucs'' = Set.fromList [USCIndex (ICSLessEq env ix (zeroIndex vphi)), USCConditional [] (UCCSSubset sigma (UCSet $ Set.singleton UCOut))]
+                ucs'' = Set.singleton $ USCConditional [] (UCCSSubset sigma (UCSet $ Set.singleton UCOut))
 
         reduceTypeConstraint (TCSConditionalSubsumption cgammas env (TNat ix jx) (TNat ix' jx')) (tcs', ucs') = (tcs', ucs' `Set.union` ucs'')
             where

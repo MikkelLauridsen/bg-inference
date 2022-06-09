@@ -53,7 +53,7 @@ instance Show IndexVar where
 instance Show Coefficient where
 
   show (COEVar alpha) = show alpha
-  show (COENumeral n) = "(" ++ show n ++ ")"
+  show (COENumeral n) = show n
   show (COEAdd c c') = "(" ++ show c ++ "+" ++ show c' ++ ")"
   show (COEMul c c') = show c ++ show c'
   show (COESub c c') = "(" ++ show c ++ "-" ++ show c' ++ ")"

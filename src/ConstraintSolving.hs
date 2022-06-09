@@ -12,6 +12,7 @@ import qualified Data.Maybe
 import Data.Set as Set
 import Debug.Trace
 import Types
+import PiCalculus
 
 -- Simple types enriched with a type that may be eihter a channel or a server
 data SimpleTypeEnriched
@@ -107,7 +108,11 @@ getSubstitutions (STECSEqual (STEServ i1s t1s) (STEServ i2s t2s) : r) =
   if i1s == i2s
     then getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
     else Left "Non-matching index variables"
-getSubstitutions (a : r) = Left "Cannot get substitution"
+getSubstitutions (STECSEqual (STEChannel t1s) (STEChannelOrServ t2s) : r) = getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
+getSubstitutions (STECSEqual (STEChannelOrServ t1s) (STEChannel t2s) : r) = getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
+getSubstitutions (STECSEqual (STEServ _ t1s) (STEChannelOrServ t2s) : r) = getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
+getSubstitutions (STECSEqual (STEChannelOrServ t1s) (STEServ _ t2s) : r) = getSubstitutions (r ++ zipWith STECSEqual t1s t2s)
+getSubstitutions (a : r) = Left $ "Cannot get substitution: " ++ show a
 
 refineSubstitutions :: Map TypeVar SimpleTypeEnriched -> Map TypeVar SimpleTypeEnriched
 refineSubstitutions s = Map.map (refineSimpleTypeEnr s) s
