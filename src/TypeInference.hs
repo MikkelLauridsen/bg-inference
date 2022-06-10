@@ -130,6 +130,25 @@ delayEnv :: Index -> TypeEnv -> TypeEnv
 delayEnv jx = Map.map (delay jx)
 
 
+delayEnvServ :: IndexVarConstraintEnv -> Index -> TypeEnv -> Infer TypeEnv
+delayEnvServ env@(vphi, _) ix = mapM $ \t ->
+    case t of
+        TServ _ is sigma kx ts -> do
+            jx <- freshTemplate vphi
+            t' <- freshType vphi $ mkSimpleType t
+            assertConstraint $ TCSUse (USCConditionalInequality [] env jx ix)
+            assertConstraint $ TCSConditionalSubsumption [] env t' $ TServ jx is sigma kx ts            
+            return t'
+
+        _ -> return t 
+
+
+mkSimpleType :: Type -> SimpleType
+mkSimpleType (TNat _ _) = STNat
+mkSimpleType (TChannel _ _ ts) = STChannel $ Prelude.map mkSimpleType ts
+mkSimpleType (TServ _ is _ _ ts) = STServ is $ Prelude.map mkSimpleType ts
+
+
 inferTypes :: IndexVarConstraintEnv -> SimpleEnv -> Proc -> Either String (TypeEnv, Set TypeConstraint, Index)
 inferTypes env senv p =
     case runStateT (inferProc env senv p >>= \(tenv, kx) -> assertConstraint (TCSUse (USCConditionalInequality [] env zeroIndex kx)) >> return (tenv, kx)) initState of
@@ -237,11 +256,13 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
             assertConstraint $ TCSUse (USCConditionalInequality [] env ix kx')
             assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t (tenv ! v) | (v, t) <- Prelude.zip vs ts, Map.member v tenv]
             case Map.lookup a tenv of
-                Just (TServ _ _ gamma' kx3 ts') -> do 
+                Just (TServ _ _ gamma' kx3 ts') -> do
+                    assertConstraint $ TCSUse (USCConditional [] (UCCSSubset gamma' gamma))
                     assertConstraint $ TCSUse (USCConditionalInequality [] (vphi `Set.union` is, phi) kx'' kx3)
                     assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t' t | (t, t') <- Prelude.zip ts ts']
                 _ -> return ()
-            return ((delayEnv ix tenv') .: (a, TServ ix is gamma kx'' ts), kx') 
+            tenv'' <- delayEnvServ env ix tenv'
+            return (tenv'' .: (a, TServ ix is gamma kx'' ts), kx') 
 
 
         _ -> fail "invalid simple type; Expected server type"
