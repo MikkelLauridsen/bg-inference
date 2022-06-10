@@ -14,11 +14,11 @@ import Types
 inferenceSpec = describe "Inference" $ do
   it "should substitute indices for index variables" $ do
     indexSubst (Index (Map.singleton (IndexVar 0) (COENumeral 2), COENumeral 1)) (Map.singleton (IndexVar 0) (Index (Map.empty, COENumeral 3)))
-      `shouldBe` (Index (Map.empty, COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
+      `shouldBe` Index (Map.empty, COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1))
 
   it "should substitute indices for index variables (2)" $ do
     indexSubst (Index (Map.singleton (IndexVar 0) (COENumeral 2), COENumeral 1)) (Map.singleton (IndexVar 0) (Index (Map.singleton (IndexVar 0) (COENumeral 4), COENumeral 3)))
-      `shouldBe` (Index (Map.singleton (IndexVar 0) (COEMul (COENumeral 2) (COENumeral 4)), COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
+      `shouldBe` Index (Map.singleton (IndexVar 0) (COEMul (COENumeral 2) (COENumeral 4)), COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1))
 
   it "should infer simple types of running example" $ do
     inferSimpleTypes 1 False Map.empty inferenceRunningExample
@@ -82,7 +82,6 @@ inferenceSpec = describe "Inference" $ do
   let i_2xp4 = Index (Map.singleton iv_x (COENumeral 2), COENumeral 4) -- Index: 2 * x + 4
   let i_3xp1 = Index (Map.singleton iv_x (COENumeral 3), COENumeral 1) -- Index: 3 * x + 1
   let i_3xpa = Index (Map.singleton iv_x (COENumeral 3), c_a) -- Index: 3 * x + 1
-  
   it "should infer bound on simple example" $ do
     inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
       `shouldReturn` Right i_4
@@ -104,29 +103,31 @@ inferenceSpec = describe "Inference" $ do
       `shouldReturn` Right i_1
 
   it "should check index constraint 2 = 2" $ do
-    solveIndexConstraints Set.empty [ICSEqual i_2 i_2] `shouldReturn` Right Map.empty
+    solveIndexConstraints Set.empty [ICSEqual i_2 i_2] Nothing `shouldReturn` Right Map.empty
   it "should check index constraint 1 + 1 = 2" $ do
-    solveIndexConstraints Set.empty [ICSEqual i_1p1 i_2] `shouldReturn` Right Map.empty
+    solveIndexConstraints Set.empty [ICSEqual i_1p1 i_2] Nothing `shouldReturn` Right Map.empty
   it "should check index constraint a = 2" $ do
-    solveIndexConstraints Set.empty [ICSEqual i_a i_2]
+    solveIndexConstraints Set.empty [ICSEqual i_a i_2] Nothing
       `shouldReturn` Right (Map.singleton cv_a 2)
   it "should check index constraint 2x + 0 = ax + 0" $ do
-    solveIndexConstraints Set.empty [ICSEqual i_2x i_ax]
+    solveIndexConstraints Set.empty [ICSEqual i_2x i_ax] Nothing
       `shouldReturn` Right (Map.singleton cv_a 2)
   it "should check index constraint 2x + 1 <= 3x + 4" $ do
-    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xp4]
+    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xp4] Nothing
       `shouldReturn` Right Map.empty
   it "should check and fail index constraint 2x + 4 <= 3x + 1" $ do
-    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp4 i_3xp1]
+    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp4 i_3xp1] Nothing
       `shouldReturn` Left "Unsatisfiable"
   it "should check and fail index constraints 2x = 3, 3x = 4" $ do
-    solveIndexConstraints Set.empty
+    solveIndexConstraints
+      Set.empty
       [ ICSEqual i_2x i_3,
         ICSEqual i_3x i_4
       ]
+      Nothing
       `shouldReturn` Left "Unsatisfiable"
   it "should check index constraint 2x + 1 <= 3x + a" $ do
-    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xpa]
+    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xpa] Nothing
       `shouldReturn` Right (Map.singleton cv_a 1)
 
 main :: IO ()
