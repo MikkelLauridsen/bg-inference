@@ -26,9 +26,13 @@ inferBound ivarsPerServer env stenv p =
         Right (tenv, cs, kx) -> do
           let reducedConstraints = reduceTypeConstraints cs
           let (cs', _) = solveUseConstraints reducedConstraints
-          res <- solveIndexConstraints (getPositiveCoeffVars cs') (Set.toList cs') (Just kx)
+          res <- solveIndexConstraints Set.empty (Set.toList cs') (Just kx)
           case res of
-            Left serr -> return $ Left serr
+            Left _ -> do
+              res' <- solveIndexConstraints (getPositiveCoeffVars cs') (Set.toList cs') (Just kx)
+              case res' of
+                Left serr -> return $ Left serr
+                Right substI -> return $ Right (applyISubst substI kx)
             Right substI -> return $ Right (applyISubst substI kx)
 
 inferBoundVerbose :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
@@ -54,14 +58,23 @@ inferBoundVerbose ivarsPerServer env stenv p = do
           putStrLn $ showNL cs'
           putStrLn "Resulting use-variable valuation:"
           putStrLn $ show f
-
           putStrLn "Resulting positive coefficient variables:"
           putStrLn $ show (getPositiveCoeffVars cs')
-
-          res <- solveIndexConstraints (getPositiveCoeffVars cs') (Set.toList cs') (Just kx)
+          res <- solveIndexConstraints Set.empty (Set.toList cs') (Just kx)
           case res of
-            Left serr -> return $ Left serr
-            Right substI -> do
+            Left _ -> do
+              res' <- solveIndexConstraints (getPositiveCoeffVars cs') (Set.toList cs') (Just kx)
+              case res' of
+                Left serr -> return $ Left serr
+                Right substI -> do 
+                  putStrLn "Resulting coefficient variable substitution:"
+                  putStrLn $ show substI
+                  putStrLn "Resulting complexity bound:"
+                  putStrLn $ show (applyISubst substI kx)
+                  putStrLn "Resulting (APPLIED) type context:"
+                  putStrLn $ show (Map.map (applyUseValuation f . applyISubstType substI) tenv)
+                  return $ Right (applyISubst substI kx)
+            Right substI -> do 
               putStrLn "Resulting coefficient variable substitution:"
               putStrLn $ show substI
               putStrLn "Resulting complexity bound:"
@@ -69,6 +82,7 @@ inferBoundVerbose ivarsPerServer env stenv p = do
               putStrLn "Resulting (APPLIED) type context:"
               putStrLn $ show (Map.map (applyUseValuation f . applyISubstType substI) tenv)
               return $ Right (applyISubst substI kx)
+
 
 showNL :: Show a => Set a -> String
 showNL = Set.foldr (\el s -> show el ++ "\\\\ " ++ s) ""
