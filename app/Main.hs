@@ -11,7 +11,8 @@ import Data.Map as Map
 
 
 main :: IO ()
-main = inferBoundVerbose 1 False (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) inferenceRunningExample >>= print
+main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExamplef' >>= print
+--main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) exmptest' >>= print
 
 
 typeVars :: [TypeVar]
@@ -71,7 +72,7 @@ exmptest' =
     (RepInputP "seq" ["n"] $
         MatchNatP (VarE "n") NilP "n'" $
             TickP (OutputP "seq" [VarE "n'"]))
-           -- :|: (OutputP "seq" [natExp 5])
+            :|: (OutputP "seq" [natExp 10])
 
 
 
@@ -137,3 +138,45 @@ inferenceRunningExample2'' =
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" []))
               )
       )
+
+
+inferenceRunningExamplef :: Proc
+inferenceRunningExamplef =
+    RepInputP
+      "npar"
+      ["n", "r"]
+      ( MatchNatP
+          (VarE "n")
+          (OutputP "r" [])
+          "x"
+          $ RestrictP "r'" tb2 $
+            RestrictP
+              "r''"
+              tb3
+              ( TickP (OutputP "r'" [])
+                  :|: OutputP "npar" [VarE "x", VarE "r''"]
+                  :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
+              )
+      )
+      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
+
+
+inferenceRunningExamplef' :: Proc
+inferenceRunningExamplef' =
+    RepInputP
+      "npar"
+      ["n", "r"]
+      ( MatchNatP
+          (VarE "n")
+          (OutputP "r" [])
+          "x"
+          $ RestrictP "r'" tb2 $
+            RestrictP
+              "r''"
+              tb3
+              (TickP ((OutputP "r'" [])
+                  :|: OutputP "npar" [VarE "x", VarE "r''"]
+                  :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" [])
+              ))
+      )
+      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)

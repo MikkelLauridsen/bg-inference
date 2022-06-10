@@ -7,6 +7,9 @@ module Index
     IndexVarConstraintEnv,
     (.+),
     (.*),
+    (./),
+    (.-),
+    (.!),
     indexSubst,
     applyISubst
   )
@@ -26,6 +29,7 @@ data Coefficient
   | COEAdd Coefficient Coefficient 
   | COEMul Coefficient Coefficient 
   | COESub Coefficient Coefficient
+  | COEDiv Coefficient Coefficient
   deriving (Ord, Eq)
 
 newtype Index = Index (Map IndexVar Coefficient, Coefficient) deriving (Ord, Eq)
@@ -57,6 +61,7 @@ instance Show Coefficient where
   show (COEAdd c c') = "(" ++ show c ++ "+" ++ show c' ++ ")"
   show (COEMul c c') = show c ++ show c'
   show (COESub c c') = "(" ++ show c ++ "-" ++ show c' ++ ")"
+  show (COEDiv c c') = "(" ++ show c ++ ")/(" ++ show c' ++ ")" 
 
 
 instance Show Index where
@@ -70,13 +75,22 @@ instance Show Index where
 (.*) :: Coefficient -> Index -> Index
 (.*) c (Index (m', c')) = Index (Map.map (COEMul c) m', COEMul c c')
 
+(./) :: Index -> Coefficient -> Index
+(./) (Index (m, c)) c' = Index (Map.map ((flip COEDiv) c') m, COEDiv c c')
+
+(.-) :: Index -> Index -> Index
+(.-) (Index (m, c)) (Index (m', c')) = Index (Map.unionWith COEAdd m (Map.map (COESub (COENumeral 0)) m'), COESub c c')
+
+(.!) :: Index -> Index
+(.!) (Index (m, c)) = Index (Map.map (COESub (COENumeral 0)) m, COESub (COENumeral 0) c)
+
 indexSubst :: Index -> Map IndexVar Index -> Index
-indexSubst (Index (m, c)) subst = Map.foldr (.+) (Index (Map.empty, c)) $ Map.mapWithKey factor subst
+indexSubst (Index (m, c)) subst = Map.foldr (.+) (Index (Map.empty, c)) $ Map.mapWithKey factor m
   where
-    factor i ix =
-      case Map.lookup i m of
-        Just c' -> c' .* ix
-        _ -> ix
+    factor i c' =
+      case Map.lookup i subst of
+        Just ix -> c' .* ix
+        _ -> Index (Map.singleton i c', COENumeral 0)
 
   
 applyISubst :: Map CoeffVar Integer -> Index -> Index

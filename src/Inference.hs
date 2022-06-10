@@ -136,8 +136,8 @@ updateSimpleType v t = modify $ \s -> s {simpleTypeContext = Map.insert v t (sim
 maxTvarTyp :: SimpleType -> TypeVar
 maxTvarTyp (STVar v) = v
 maxTvarTyp STNat = -1
-maxTvarTyp (STChannel ts) = maximum $ map maxTvarTyp ts
-maxTvarTyp (STServ _ ts) = maximum $ map maxTvarTyp ts
+maxTvarTyp (STChannel ts) = maximum $ -1 : map maxTvarTyp ts
+maxTvarTyp (STServ _ ts) = maximum $ -1 : map maxTvarTyp ts
 
 maxTvar :: Proc -> TypeVar
 maxTvar NilP = -1

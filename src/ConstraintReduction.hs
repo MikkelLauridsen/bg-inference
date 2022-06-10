@@ -1,6 +1,7 @@
 module ConstraintReduction 
 ( reduceTypeConstraints
 , solveUseConstraints
+, getPositiveCoeffVars
 ) where
 
 import Free
@@ -9,6 +10,7 @@ import Index
 import Constraints
 import Data.Set as Set
 import Data.Map as Map
+import IndexConstraintSolving
 
 
 reduceTypeConstraints :: Set TypeConstraint -> Set UseConstraint
@@ -102,3 +104,22 @@ satisfiesUC _ _ = True
 
 zeroIndex :: Set IndexVar -> Index
 zeroIndex vphi = Index (Map.fromList $ Prelude.zip (Set.toList vphi) (Prelude.map COENumeral [0, 0 ..]), COENumeral 0) 
+
+
+getPositiveCoeffVars :: Set IndexConstraint -> Set CoeffVar
+getPositiveCoeffVars = aux Set.empty
+    where
+        aux positiveCoeffVars ics 
+            | positiveCoeffVars `Set.union` positiveCoeffVars' /= positiveCoeffVars = aux (positiveCoeffVars `Set.union` positiveCoeffVars') ics
+            | otherwise = positiveCoeffVars
+            where
+                positiveCoeffVars' = Set.foldr (Set.union . checkConstraint) Set.empty ics
+
+                checkConstraint (ICSEqual ix jx) = checkIndices ix jx `Set.union` checkIndices jx ix
+                checkConstraint (ICSLessEq _ ix jx) = checkIndices ix jx
+                checkConstraint _ = Set.empty
+
+                checkIndices (Index (m, c)) (Index (m', c')) = Prelude.foldr (\(c1, c2) b -> b `Set.union` checkCoefficients c1 c2) (checkCoefficients c c') $ Prelude.zip (Map.elems m) (Map.elems m')  
+
+                checkCoefficients c (COEVar alpha) | positiveCoeff positiveCoeffVars c = Set.singleton alpha
+                checkCoefficients _ _ = Set.empty

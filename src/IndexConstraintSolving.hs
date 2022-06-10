@@ -1,15 +1,19 @@
 module IndexConstraintSolving
   ( solveIndexConstraints,
+    positiveCoeff
   )
 where
 
 import Constraints
 import Data.Functor ((<&>))
-import Data.List (union)
-import qualified Data.Map as Map
+import Data.List as List (union)
+import Data.Map as Map
+import Data.Set as Set
 import Data.Maybe
 import Index
 import Z3.Monad
+import Data.Foldable(find)
+import Debug.Trace(trace)
 
 data CoefficientConstraint = CCSEqual Coefficient Coefficient | CCSLessEq Coefficient Coefficient | CCSFalse
 
@@ -20,20 +24,27 @@ instance Show CoefficientConstraint where
 
 zeroCoeff = COENumeral 0
 
-reduceIndexConstraints :: [IndexConstraint] -> [CoefficientConstraint]
-reduceIndexConstraints [] = []
-reduceIndexConstraints (ICSEqual (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r) =
+reduceIndexConstraints :: Set CoeffVar -> [IndexConstraint] -> [CoefficientConstraint]
+reduceIndexConstraints _ [] = []
+reduceIndexConstraints positiveCoeffVars (ICSEqual (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r) =
   CCSEqual ix1b ix2b :
-  Prelude.map (\k -> CCSEqual (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) (Map.keys ix1m `union` Map.keys ix2m)
-    ++ reduceIndexConstraints r
-reduceIndexConstraints (ICSLessEq env (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r) =
+  Prelude.map (\k -> CCSEqual (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) (Map.keys ix1m `List.union` Map.keys ix2m)
+    ++ reduceIndexConstraints positiveCoeffVars r
+reduceIndexConstraints positiveCoeffVars (ICSLessEq env@(_, phi) ix jx : r) =
   CCSLessEq ix1b ix2b :
-  Prelude.map (\k -> CCSLessEq (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) (Map.keys ix1m `union` Map.keys ix2m)
-    ++ reduceIndexConstraints r
-reduceIndexConstraints (ICSFalse : r) = CCSFalse : reduceIndexConstraints r
+  Prelude.map (\k -> CCSLessEq (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) (Map.keys ix1m `List.union` Map.keys ix2m)
+    ++ reduceIndexConstraints positiveCoeffVars r
+  where
+    Index (ix1m, ix1b) = indexSubst ix subst
+    Index (ix2m, ix2b) = indexSubst jx subst
 
-solveIndexConstraints :: [IndexConstraint] -> IO (Either String (Map.Map CoeffVar Integer))
-solveIndexConstraints constraints = do
+    subst = Set.foldr (compose . indexVarConstraintToSubst positiveCoeffVars) Map.empty phi
+    compose subst' subst'' = Map.map ((flip indexSubst) subst') subst'' `Map.union` subst'
+
+reduceIndexConstraints positiveCoeffVars (ICSFalse : r) = CCSFalse : reduceIndexConstraints positiveCoeffVars r
+
+solveIndexConstraints :: Set CoeffVar -> [IndexConstraint] -> IO (Either String (Map.Map CoeffVar Integer))
+solveIndexConstraints positiveCoeffVars constraints = do
   res <- evalZ3 script
   case res of
     Just (Sat, vars) -> return $ Right vars
@@ -41,13 +52,13 @@ solveIndexConstraints constraints = do
     Just (a, vars) -> return $ Left $ "Unknown error: Just (" ++ show a ++ ", " ++ show vars ++ ")"
     Nothing -> return $ Left "No solution"
   where
-    coefficientConstraints = reduceIndexConstraints constraints
+    coefficientConstraints = reduceIndexConstraints positiveCoeffVars constraints
     script = do
       (asts, vMaps) <- mapM coefficientConstraintToZ3 coefficientConstraints <&> unzip
       let vMaps' = concat vMaps
       let (vars, varAsts) = unzip vMaps'
       mapM_ optimizeAssert asts
-      getObjectiveFunction vars >>= optimizeMinimize
+     -- getObjectiveFunction vars >>= optimizeMinimize
       res <- optimizeCheck []
       case res of
         Sat -> do
@@ -97,8 +108,54 @@ coefficientToZ3 (COEMul c1 c2) = do
   (z2, m2) <- coefficientToZ3 c2
   ast <- mkMul [z1, z2]
   return (ast, m1 ++ m2)
+coefficientToZ3 (COESub c1 c2) = do
+  (z1, m1) <- coefficientToZ3 c1
+  (z2, m2) <- coefficientToZ3 c2
+  ast <- mkSub [z1, z2]
+  return (ast, m1 ++ m2)
+coefficientToZ3 (COEDiv c1 c2) = do
+  (z1, m1) <- coefficientToZ3 c1
+  (z2, m2) <- coefficientToZ3 c2
+  ast <- mkDiv z1 z2
+  return (ast, m1 ++ m2)
 
 coefficientVarToZ3 :: CoeffVar -> Z3 AST
 coefficientVarToZ3 (CoeffVar v) = do
   sym <- mkIntSymbol v
   mkIntVar sym
+
+
+indexVarConstraintToSubst :: Set CoeffVar -> IndexVarConstraint -> Map IndexVar Index
+indexVarConstraintToSubst positiveCoeffVars (IVCLessEq ix (Index (m', c'))) =
+  case find (positiveCoeff positiveCoeffVars . snd) $ Map.assocs m' of
+    Just (i, c) -> Map.singleton i $ (ix .- Index (Map.delete i m', c')) ./ c
+    _ -> Map.empty
+
+
+positiveCoeff :: Set CoeffVar -> Coefficient -> Bool
+positiveCoeff positiveCoeffVars (COEVar alpha) | Set.member alpha positiveCoeffVars = True
+positiveCoeff _ (COENumeral n) | n > 0 = True
+positiveCoeff positiveCoeffVars (COEAdd c c') = (positiveCoeff positiveCoeffVars c && nonnegativeCoeff positiveCoeffVars c') || (nonnegativeCoeff positiveCoeffVars c && positiveCoeff positiveCoeffVars c')
+positiveCoeff positiveCoeffVars (COEMul c c') = positiveCoeff positiveCoeffVars c && positiveCoeff positiveCoeffVars c'
+positiveCoeff positiveCoeffVars (COESub c c') = positiveCoeff positiveCoeffVars c && nonpositiveCoeff positiveCoeffVars c' 
+positiveCoeff positiveCoeffVars (COEDiv c c') = positiveCoeff positiveCoeffVars c && positiveCoeff positiveCoeffVars c'
+positiveCoeff _ _ = False
+
+
+nonnegativeCoeff :: Set CoeffVar -> Coefficient -> Bool
+nonnegativeCoeff positiveCoeffVars (COEVar alpha) | Set.member alpha positiveCoeffVars = True
+nonnegativeCoeff _ (COENumeral n) | n >= 0 = True
+nonnegativeCoeff positiveCoeffVars (COEAdd c c') = nonnegativeCoeff positiveCoeffVars c && nonnegativeCoeff positiveCoeffVars c'
+nonnegativeCoeff positiveCoeffVars (COEMul c c') = nonnegativeCoeff positiveCoeffVars c && nonnegativeCoeff positiveCoeffVars c'
+nonnegativeCoeff positiveCoeffVars (COESub c c') = nonnegativeCoeff positiveCoeffVars c && nonpositiveCoeff positiveCoeffVars c' 
+nonnegativeCoeff positiveCoeffVars (COEDiv c c') = nonnegativeCoeff positiveCoeffVars c && positiveCoeff positiveCoeffVars c'
+nonnegativeCoeff _ _ = False
+
+
+nonpositiveCoeff :: Set CoeffVar -> Coefficient -> Bool
+nonpositiveCoeff _ (COENumeral n) | n < 0 = True
+nonpositiveCoeff positiveCoeffVars (COEAdd c c') = nonpositiveCoeff positiveCoeffVars c && nonpositiveCoeff positiveCoeffVars c'
+nonpositiveCoeff positiveCoeffVars (COEMul c c') = (nonpositiveCoeff positiveCoeffVars c && nonnegativeCoeff positiveCoeffVars c') || (nonnegativeCoeff positiveCoeffVars c && nonpositiveCoeff positiveCoeffVars c')
+nonpositiveCoeff positiveCoeffVars (COESub c c') = nonpositiveCoeff positiveCoeffVars c && nonnegativeCoeff positiveCoeffVars c' 
+nonpositiveCoeff positiveCoeffVars (COEDiv c c') = nonpositiveCoeff positiveCoeffVars c && positiveCoeff positiveCoeffVars c'
+nonpositiveCoeff _ _ = False

@@ -15,33 +15,33 @@ import PiCalculus
 import TypeInference
 import Types
 
-inferBound :: Int -> Bool -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
-inferBound ivarsPerServer withLowerBound env stenv p =
-  case inferSimpleTypes ivarsPerServer withLowerBound stenv p of -- TODO: extend with stenv
+inferBound :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
+inferBound ivarsPerServer env stenv p =
+  case inferSimpleTypes ivarsPerServer False stenv p of -- TODO: extend with stenv
     Left serr -> return $ Left serr
     Right substST -> do
       let p' = applySTVSubst substST p
-      case inferTypes withLowerBound env stenv p' of
+      case inferTypes env stenv p' of
         Left serr -> return $ Left serr
         Right (tenv, cs, kx) -> do
           let reducedConstraints = reduceTypeConstraints cs
           let (cs', _) = solveUseConstraints reducedConstraints
-          res <- solveIndexConstraints $ Set.toList cs'
+          res <- solveIndexConstraints (getPositiveCoeffVars cs') $ Set.toList cs'
           case res of
             Left serr -> return $ Left serr
             Right substI -> return $ Right (applyISubst substI kx)
 
-inferBoundVerbose :: Int -> Bool -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
-inferBoundVerbose ivarsPerServer withLowerBound env stenv p = do
+inferBoundVerbose :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
+inferBoundVerbose ivarsPerServer env stenv p = do
   putStrLn "Process prior to inference:"
   putStrLn $ show p
-  case inferSimpleTypes ivarsPerServer withLowerBound stenv p of -- TODO: extend with stenv
+  case inferSimpleTypes ivarsPerServer False stenv p of -- TODO: extend with stenv
     Left serr -> return $ Left serr
     Right substST -> do
       putStrLn "Inferred simple type substitution:"
       putStrLn $ show substST
       let p' = applySTVSubst substST p
-      case inferTypes withLowerBound env stenv p' of
+      case inferTypes env stenv p' of
         Left serr -> return $ Left serr
         Right (tenv, cs, kx) -> do
           putStrLn "Inferred type-constraint satisfaction problem:"
@@ -54,7 +54,11 @@ inferBoundVerbose ivarsPerServer withLowerBound env stenv p = do
           putStrLn $ showNL cs'
           putStrLn "Resulting use-variable valuation:"
           putStrLn $ show f
-          res <- solveIndexConstraints $ Set.toList cs'
+
+          putStrLn "Resulting positive coefficient variables:"
+          putStrLn $ show (getPositiveCoeffVars cs')
+
+          res <- solveIndexConstraints (getPositiveCoeffVars cs') $ Set.toList cs'
           case res of
             Left serr -> return $ Left serr
             Right substI -> do

@@ -21,7 +21,7 @@ inferenceSpec = describe "Inference" $ do
       `shouldBe` (Index (Map.singleton (IndexVar 0) (COEMul (COENumeral 2) (COENumeral 4)), COEAdd (COEMul (COENumeral 2) (COENumeral 3)) (COENumeral 1)))
 
   it "should infer simple types of running example" $ do
-    inferSimpleTypes 1 Map.empty inferenceRunningExample
+    inferSimpleTypes 1 False Map.empty inferenceRunningExample
       `shouldBe` Right
         ( Map.fromList
             [ (b1, STServ (Set.singleton (IndexVar 0)) [STNat, STChannel []]),
@@ -35,7 +35,7 @@ inferenceSpec = describe "Inference" $ do
         )
 
   it "should infer simple types of fib(3)" $ do
-    inferSimpleTypes 2 Map.empty fib3
+    inferSimpleTypes 2 False Map.empty fib3
       `shouldBe` Right
         ( Map.fromList
             [ (0, STServ (Set.fromList [i1, i2]) [STNat, STNat, STChannel [STNat]]),
@@ -104,29 +104,29 @@ inferenceSpec = describe "Inference" $ do
       `shouldReturn` Right i_1
 
   it "should check index constraint 2 = 2" $ do
-    solveIndexConstraints [ICSEqual i_2 i_2] `shouldReturn` Right Map.empty
+    solveIndexConstraints Set.empty [ICSEqual i_2 i_2] `shouldReturn` Right Map.empty
   it "should check index constraint 1 + 1 = 2" $ do
-    solveIndexConstraints [ICSEqual i_1p1 i_2] `shouldReturn` Right Map.empty
+    solveIndexConstraints Set.empty [ICSEqual i_1p1 i_2] `shouldReturn` Right Map.empty
   it "should check index constraint a = 2" $ do
-    solveIndexConstraints [ICSEqual i_a i_2]
+    solveIndexConstraints Set.empty [ICSEqual i_a i_2]
       `shouldReturn` Right (Map.singleton cv_a 2)
   it "should check index constraint 2x + 0 = ax + 0" $ do
-    solveIndexConstraints [ICSEqual i_2x i_ax]
+    solveIndexConstraints Set.empty [ICSEqual i_2x i_ax]
       `shouldReturn` Right (Map.singleton cv_a 2)
   it "should check index constraint 2x + 1 <= 3x + 4" $ do
-    solveIndexConstraints [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xp4]
+    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xp4]
       `shouldReturn` Right Map.empty
   it "should check and fail index constraint 2x + 4 <= 3x + 1" $ do
-    solveIndexConstraints [ICSLessEq (Set.empty, Set.empty) i_2xp4 i_3xp1]
+    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp4 i_3xp1]
       `shouldReturn` Left "Unsatisfiable"
   it "should check and fail index constraints 2x = 3, 3x = 4" $ do
-    solveIndexConstraints
+    solveIndexConstraints Set.empty
       [ ICSEqual i_2x i_3,
         ICSEqual i_3x i_4
       ]
       `shouldReturn` Left "Unsatisfiable"
   it "should check index constraint 2x + 1 <= 3x + a" $ do
-    solveIndexConstraints [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xpa]
+    solveIndexConstraints Set.empty [ICSLessEq (Set.empty, Set.empty) i_2xp1 i_3xpa]
       `shouldReturn` Right (Map.singleton cv_a 1)
 
 main :: IO ()
