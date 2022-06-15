@@ -11,7 +11,8 @@ import Data.Map as Map
 
 
 main :: IO ()
-main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExamplef' >>= print
+main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
+--main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExamplef' >>= print
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) exmptest' >>= print
 
 
@@ -73,6 +74,14 @@ exmptest' =
         MatchNatP (VarE "n") NilP "n'" $
             TickP (OutputP "seq" [VarE "n'"]))
             :|: (OutputP "seq" [natExp 10])
+
+
+
+addtest :: Proc
+addtest =
+    RepInputP "add" ["x", "y", "r"] $
+        MatchNatP (VarE "x") (OutputP "r" [VarE "y"]) "z" $
+            OutputP "add" [VarE "z", SuccE (VarE "y"), VarE "r"]
 
 
 
