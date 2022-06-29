@@ -16,7 +16,7 @@ main :: IO ()
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) exmptest' >>= print
 main = do
   putStrLn ""
-  putStrLn "Process: tick.tick.tick.0"
+  putStrLn "Process: tick.tick.tick.tick.0"
   simpleInfRes <- inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
   putStrLn $ "Inferred bound: " ++ show simpleInfRes
   putStrLn ""
