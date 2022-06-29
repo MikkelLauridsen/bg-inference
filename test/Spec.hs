@@ -24,7 +24,7 @@ inferenceSpec = describe "Inference" $ do
     inferSimpleTypes 1 False Map.empty inferenceRunningExample
       `shouldBe` Right
         ( Map.fromList
-            [ (b1, STServ (Set.singleton (IndexVar 0)) [STNat, STChannel []]),
+            [ (b1, STServ (Set.singleton (IndexVar 1)) [STNat, STChannel []]),
               (b2, STChannel []),
               (b3, STChannel []),
               (b4, STChannel []),
@@ -141,7 +141,7 @@ simpleTypeVars :: [SimpleType]
 simpleTypeVars = Prelude.map STVar [0 ..]
 
 indexVars :: [IndexVar]
-indexVars = Prelude.map IndexVar [0 ..]
+indexVars = Prelude.map IndexVar [1 ..]
 
 b1 : b2 : b3 : b4 : b5 : b6 : b7 : _ = typeVars
 

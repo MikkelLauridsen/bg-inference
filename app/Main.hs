@@ -11,9 +11,26 @@ import Data.Map as Map
 
 
 main :: IO ()
-main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
---main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExamplef' >>= print
+--main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
+--main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExample2' >>= print
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) exmptest' >>= print
+main = do
+  putStrLn ""
+  putStrLn "Process: tick.tick.tick.0"
+  simpleInfRes <- inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
+  putStrLn $ "Inferred bound: " ++ show simpleInfRes
+  putStrLn ""
+  putStrLn ""
+  putStrLn "Process: !npar(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.0 | npar<x,r'> | r'().r<>) } | (nr)(npar<10,r> | r().0)"
+  runningExmpRes <- inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
+  putStrLn $ "Inferred bound: " ++ show runningExmpRes
+  putStrLn ""
+  putStrLn ""
+  putStrLn "Process: !seq(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.seq<x,r'> | r'().r<>) } | (nr)(seq<10,r> | r().0)"
+  runningExmpRes2 <- inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExampleSim
+  putStrLn $ "Inferred bound: " ++ show runningExmpRes2
+
+
 
 
 typeVars :: [TypeVar]
@@ -24,6 +41,10 @@ simpleTypeVars = [STVar i | i <- typeVars]
 
 tb1 : tb2 : tb3 : tb4 : tb5 : tbr = simpleTypeVars
 
+simpleInfExample =
+  TickP (TickP (TickP (TickP NilP)))
+
+-- !npar(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.0 | npar<x,r'> | r'().r<>) } | (nr)(npar<10,r> | r().0)
 inferenceRunningExample :: Proc
 inferenceRunningExample =
   RestrictP "npar" tb1 $
@@ -40,8 +61,9 @@ inferenceRunningExample =
                   :|: InputP "r'" [] (OutputP "r" [])
               )
       )
-      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 2, VarE "r"] :|: InputP "r" [] NilP)
+      :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
 
+-- !seq(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.seq<x,r'> | r'().r<>) } | (nr)(seq<10,r> | r().0)
 inferenceRunningExampleSim :: Proc
 inferenceRunningExampleSim =
   RestrictP "npar" tb1 $
@@ -52,8 +74,8 @@ inferenceRunningExampleSim =
           (VarE "n")
           (OutputP "r" [])
           "x"
-          $ RestrictP "r'" tb2 
-              (TickP $ TickP (OutputP "npar" [VarE "x", VarE "r'"]
+          $ RestrictP "r'" tb2
+              (TickP (OutputP "npar" [VarE "x", VarE "r'"]
                   :|: InputP "r'" [] (OutputP "r" [])
               ))
       )
@@ -70,10 +92,10 @@ exmptest =
 
 exmptest' :: Proc
 exmptest' =
-    (RepInputP "seq" ["n"] $
+    RepInputP "seq" ["n"] (
         MatchNatP (VarE "n") NilP "n'" $
             TickP (OutputP "seq" [VarE "n'"]))
-            :|: (OutputP "seq" [natExp 10])
+            :|: OutputP "seq" [natExp 10]
 
 
 
@@ -105,7 +127,6 @@ inferenceRunningExample2 =
               )
       )
       :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
-                
 
 
 inferenceRunningExample2' :: Proc
@@ -127,7 +148,7 @@ inferenceRunningExample2' =
                   :|: InputP "r'" [] (InputP "r''" [] $ OutputP "r" []))
               )
       )
-                
+
 
 inferenceRunningExample2'' :: Proc
 inferenceRunningExample2'' =
