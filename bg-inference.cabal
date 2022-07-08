@@ -38,6 +38,7 @@ library
       ConstraintReduction
       TypeInference
       Engine
+      Lexer
   other-modules:
       Paths_bg_inference
   hs-source-dirs:
