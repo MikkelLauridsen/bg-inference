@@ -5,24 +5,25 @@ module Lexer (
 import Data.Char
 
 data Token 
-    = NewT
-    | InT
-    | VarT String
-    | RepT
-    | DotT
-    | QuestionT
-    | ExclamationT
-    | ParenLT
-    | ParenRT
-    | SepaT
-    | CommaT
-    | NatT Int
-    | TickT
-    | MatchT
-    | CurlyLT
-    | CurlyRT
-    | SemiT
-    | ArrowT
+    = NewT         -- new
+    | InT          -- in
+    | VarT String  -- [a-z]+[0-9]*
+    | RepT         -- *
+    | DotT         -- .
+    | QuestionT    -- ?
+    | ExclamationT -- !
+    | ParenLT      -- (
+    | ParenRT      -- )
+    | SepaT        -- |
+    | CommaT       -- ,
+    | NatT Int     -- [0-9]+
+    | TickT        -- tick
+    | MatchT       -- match
+    | CurlyLT      -- {
+    | CurlyRT      -- }
+    | SemiT        -- ;
+    | ArrowT       -- ->
+    deriving Eq
 
 tokenize :: String -> Maybe [Token]
 tokenize = aux False
