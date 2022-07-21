@@ -6,6 +6,8 @@ import Data.Char
 
 data Token 
     = NewT         -- new
+    | SuccT        -- succ
+    | ZeroT        -- zero
     | InT          -- in
     | VarT String  -- [a-z]+[0-9]*
     | RepT         -- *
@@ -23,10 +25,11 @@ data Token
     | CurlyRT      -- }
     | SemiT        -- ;
     | ArrowT       -- ->
+    | EOFT
     deriving Eq
 
 tokenize :: String -> Maybe [Token]
-tokenize = aux False
+tokenize = aux False ++ [EOFT]
     where
         aux _ "" = Just []       
         aux True ('*':'*':'*':'/':s) = aux False s
@@ -34,6 +37,8 @@ tokenize = aux False
         aux False (c:s) | isSpace c = aux False s 
         aux False ('/':'*':'*':'*':s) = aux True s
         aux False ('n':'e':'w':s) = aux False s >>= (\tokens -> return $ NewT : tokens)
+        aux False ('s':'u':'c':'c':s) = aux False s >>= (\tokens -> return $ SuccT : tokens)
+        aux False ('z':'e':'r':'o':s) = aux False s >>= (\tokens -> return $ ZeroT : tokens)
         aux False ('i':'n':s) = aux False s >>= (\tokens -> return $ InT : tokens)
         aux False ('*':s) = aux False s >>= (\tokens -> return $ RepT : tokens)
         aux False ('.':s) = aux False s >>= (\tokens -> return $ DotT : tokens)
