@@ -49,6 +49,7 @@ AProc : tick '.' AProc                                                  { TickP 
       | var '?' '(' Vars ')'                                            { InputP (getVar $1) $4 NilP }
       | var '?' '(' Vars ')' '.' '(' Proc ')'                           { InputP (getVar $1) $4 $8 }  
       | var '!' '(' Exps ')'                                            { OutputP (getVar $1) $4 }
+      | new var in Proc                                                 { RestrictP (getVar $2) stypePlaceholder $4 }
       | match Exp '{' zero '->' Proc ';' succ '(' var ')' '->' Proc '}' { MatchNatP $2 $6 (getVar $10) $13 }
 
 Exp : zero             { ZeroE }
@@ -72,4 +73,5 @@ ExpList : Exp             { [$1] }
 
     -- TODO: write helper functions
 
+    stypePlaceholder = STVar TypeVar -1 -- todo 
 }
