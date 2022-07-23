@@ -39,6 +39,7 @@ library
       TypeInference
       Engine
       Lexer
+      Parser
   other-modules:
       Paths_bg_inference
   hs-source-dirs:
@@ -49,7 +50,8 @@ library
       multiset,
       mtl,
       z3,
-      extra
+      extra,
+      array
   default-language: Haskell2010
 
 executable bg-inference-exe

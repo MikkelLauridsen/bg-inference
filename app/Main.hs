@@ -8,27 +8,37 @@ import Index
 import Constraints
 import Data.Set as Set
 import Data.Map as Map
+import Parser (parse)
+import Lexer (tokenize)
+import System.Environment
 
 
 main :: IO ()
+main = do
+  args <- getArgs
+  case args of
+    [filePath] -> do
+      s <- readFile filePath
+      print $ tokenize s >>= parse
+
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExample2' >>= print
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "seq" $ STServ (Set.fromList [IndexVar 0]) [STNat]) exmptest' >>= print
-main = do
-  putStrLn ""
-  putStrLn "Process: tick.tick.tick.tick.0"
-  simpleInfRes <- inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
-  putStrLn $ "Inferred bound: " ++ show simpleInfRes
-  putStrLn ""
-  putStrLn ""
-  putStrLn "Process: !npar(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.0 | npar<x,r'> | r'().r<>) } | (nr)(npar<10,r> | r().0)"
-  runningExmpRes <- inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
-  putStrLn $ "Inferred bound: " ++ show runningExmpRes
-  putStrLn ""
-  putStrLn ""
-  putStrLn "Process: !seq(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.seq<x,r'> | r'().r<>) } | (nr)(seq<10,r> | r().0)"
-  runningExmpRes2 <- inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExampleSim
-  putStrLn $ "Inferred bound: " ++ show runningExmpRes2
+--main = do
+--  putStrLn ""
+--  putStrLn "Process: tick.tick.tick.tick.0"
+--  simpleInfRes <- inferBound 1 (Set.empty, Set.empty) Map.empty simpleInfExample
+--  putStrLn $ "Inferred bound: " ++ show simpleInfRes
+--  putStrLn ""
+--  putStrLn ""
+--  putStrLn "Process: !npar(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.0 | npar<x,r'> | r'().r<>) } | (nr)(npar<10,r> | r().0)"
+--  runningExmpRes <- inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExample
+--  putStrLn $ "Inferred bound: " ++ show runningExmpRes
+--  putStrLn ""
+--  putStrLn ""
+--  putStrLn "Process: !seq(n,r).match n { 0 -> r<>; s(x) -> (vr')(tick.seq<x,r'> | r'().r<>) } | (nr)(seq<10,r> | r().0)"
+--  runningExmpRes2 <- inferBound 1 (Set.empty, Set.empty) Map.empty inferenceRunningExampleSim
+--  putStrLn $ "Inferred bound: " ++ show runningExmpRes2
 
 
 

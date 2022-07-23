@@ -1,5 +1,6 @@
 module Lexer (
   tokenize
+,  Token (..)
 ) where
 
 import Data.Char
@@ -25,11 +26,10 @@ data Token
     | CurlyRT      -- }
     | SemiT        -- ;
     | ArrowT       -- ->
-    | EOFT
     deriving Eq
 
 tokenize :: String -> Maybe [Token]
-tokenize = aux False ++ [EOFT]
+tokenize = aux False
     where
         aux _ "" = Just []       
         aux True ('*':'*':'*':'/':s) = aux False s
