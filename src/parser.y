@@ -44,6 +44,7 @@ Proc : AProc          { $1 }
      | AProc '|' Proc { $1 :|: $3 }
 
 AProc : tick '.' AProc                                                  { TickP $3 }
+      | tick                                                            { TickP NilP }
       | '!' var '?' '(' Vars ')'                                        { RepInputP $2 $5 NilP }
       | '!' var '?' '(' Vars ')' '.' '(' Proc ')'                       { RepInputP $2 $5 $9 }  
       | var '?' '(' Vars ')'                                            { InputP $1 $4 NilP }
@@ -71,7 +72,7 @@ ExpList : Exp             { [$1] }
 
 {
 
-stypePlaceholder = STVar (-1) -- todo 
+stypePlaceholder = STVar (-1) -- todo: use increasing vars ..
 
 unfoldNat :: Int -> Exp
 unfoldNat n 

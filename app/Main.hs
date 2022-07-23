@@ -19,7 +19,11 @@ main = do
   case args of
     [filePath] -> do
       s <- readFile filePath
-      print $ tokenize s >>= parse
+      case tokenize s >>= parse of
+        Nothing -> putStrLn "parse error"
+        Just process -> do
+          inferBound 1 (Set.empty, Set.empty) Map.empty process >>= print
+    _ -> putStrLn "invalid invocation; must be called with a filepath"
 
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "npar" $ STServ (Set.fromList [IndexVar 0]) [STNat, STChannel []]) inferenceRunningExample2' >>= print
