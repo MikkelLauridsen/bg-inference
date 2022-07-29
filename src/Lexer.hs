@@ -9,6 +9,7 @@ data Token
     = NewT         -- new
     | SuccT        -- succ
     | ZeroT        -- zero
+    | NilT         -- nil
     | InT          -- in
     | VarT String  -- [a-z]+[0-9]*
     | RepT         -- *
@@ -39,6 +40,7 @@ tokenize = aux False
         aux False ('n':'e':'w':s) = aux False s >>= (\tokens -> return $ NewT : tokens)
         aux False ('s':'u':'c':'c':s) = aux False s >>= (\tokens -> return $ SuccT : tokens)
         aux False ('z':'e':'r':'o':s) = aux False s >>= (\tokens -> return $ ZeroT : tokens)
+        aux False ('n':'i':'l':s) = aux False s >>= (\tokens -> return $ NilT : tokens)
         aux False ('i':'n':s) = aux False s >>= (\tokens -> return $ InT : tokens)
         aux False ('*':s) = aux False s >>= (\tokens -> return $ RepT : tokens)
         aux False ('.':s) = aux False s >>= (\tokens -> return $ DotT : tokens)

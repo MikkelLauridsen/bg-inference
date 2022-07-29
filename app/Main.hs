@@ -8,7 +8,7 @@ import Index
 import Constraints
 import Data.Set as Set
 import Data.Map as Map
-import Parser (parse)
+import Parser (parse, addFreshTypeVars)
 import Lexer (tokenize)
 import System.Environment
 
@@ -22,7 +22,9 @@ main = do
       case tokenize s >>= parse of
         Nothing -> putStrLn "parse error"
         Just process -> do
-          inferBound 1 (Set.empty, Set.empty) Map.empty process >>= print
+          let process' = addFreshTypeVars process
+          print process'
+          inferBound 1 (Set.empty, Set.empty) Map.empty process' >>= print
     _ -> putStrLn "invalid invocation; must be called with a filepath"
 
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print

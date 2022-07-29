@@ -2,6 +2,7 @@
 
 module Parser 
 ( parse
+, addFreshTypeVars
 ) where
 
 import Lexer
@@ -20,6 +21,7 @@ import Types
     new          { NewT }         -- new
     succ         { SuccT }        -- succ
     zero         { ZeroT }        -- zero
+    nil          { NilT }         -- nil
     in           { InT  }         -- in
     var          { VarT $$ }      -- [a-z]+[0-9]*
     '*'          { RepT }         -- *
@@ -43,10 +45,11 @@ import Types
 Proc : AProc          { $1 }
      | AProc '|' Proc { $1 :|: $3 }
 
-AProc : tick '.' AProc                                                  { TickP $3 }
+AProc : nil                                                             { NilP }
+      | tick '.' AProc                                                  { TickP $3 }
       | tick                                                            { TickP NilP }
-      | '!' var '?' '(' Vars ')'                                        { RepInputP $2 $5 NilP }
-      | '!' var '?' '(' Vars ')' '.' '(' Proc ')'                       { RepInputP $2 $5 $9 }  
+      | '*' var '?' '(' Vars ')'                                        { RepInputP $2 $5 NilP }
+      | '*' var '?' '(' Vars ')' '.' '(' Proc ')'                       { RepInputP $2 $5 $9 }  
       | var '?' '(' Vars ')'                                            { InputP $1 $4 NilP }
       | var '?' '(' Vars ')' '.' '(' Proc ')'                           { InputP $1 $4 $8 }  
       | var '!' '(' Exps ')'                                            { OutputP $1 $4 }
@@ -72,7 +75,7 @@ ExpList : Exp             { [$1] }
 
 {
 
-stypePlaceholder = STVar (-1) -- todo: use increasing vars ..
+stypePlaceholder = STVar (-1)
 
 unfoldNat :: Int -> Exp
 unfoldNat n 
@@ -83,5 +86,33 @@ unfoldNat n
 parseError :: ([Token], [String]) -> Maybe a
 parseError _ = Nothing -- TODO
 
+
+addFreshTypeVars :: Proc -> Proc
+addFreshTypeVars p = fst $ aux 0 p
+    where
+        aux :: Int -> Proc -> (Proc, Int)
+        aux i (p :|: q) = (p' :|: q', k)
+            where
+                (p', j) = aux i p
+                (q', k) = aux j q
+        
+        aux i (InputP a vs p) = (InputP a vs p', j)
+            where
+                (p', j) = aux i p
+
+        aux i (RepInputP a vs p) = (RepInputP a vs p', j)
+            where
+                (p', j) = aux i p
+
+        aux i (RestrictP a _ p) = (RestrictP a (STVar i) p', j)
+            where
+                (p', j) = aux (i + 1) p
+
+        aux i (MatchNatP e p x q) = (MatchNatP e p' x q', k)
+            where
+                (p', j) = aux i p
+                (q', k) = aux j q
+
+        aux i p = (p, i)
 
 }

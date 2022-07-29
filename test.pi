@@ -2,5 +2,10 @@
 
 
 
-
-tick.tick.tick | tick.tick
+/***
+inference takes too long for this process it seems
+ ***/
+new seq in *seq?(n).(match n {
+    zero -> nil;
+    succ(m) -> tick.seq!(m)
+})
