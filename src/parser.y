@@ -48,6 +48,7 @@ Proc : AProc          { $1 }
 AProc : nil                                                             { NilP }
       | tick '.' AProc                                                  { TickP $3 }
       | tick                                                            { TickP NilP }
+      | '(' Proc ')'                                                    { $2 }
       | '*' var '?' '(' Vars ')'                                        { RepInputP $2 $5 NilP }
       | '*' var '?' '(' Vars ')' '.' '(' Proc ')'                       { RepInputP $2 $5 $9 }  
       | var '?' '(' Vars ')'                                            { InputP $1 $4 NilP }
