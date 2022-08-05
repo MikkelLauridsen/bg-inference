@@ -50,9 +50,9 @@ AProc : nil                                                             { NilP }
       | tick                                                            { TickP NilP }
       | '(' Proc ')'                                                    { $2 }
       | '*' var '?' '(' Vars ')'                                        { RepInputP $2 $5 NilP }
-      | '*' var '?' '(' Vars ')' '.' '(' Proc ')'                       { RepInputP $2 $5 $9 }  
+      | '*' var '?' '(' Vars ')' '.' AProc                              { RepInputP $2 $5 $8 }  
       | var '?' '(' Vars ')'                                            { InputP $1 $4 NilP }
-      | var '?' '(' Vars ')' '.' '(' Proc ')'                           { InputP $1 $4 $8 }  
+      | var '?' '(' Vars ')' '.' AProc                                  { InputP $1 $4 $7 }  
       | var '!' '(' Exps ')'                                            { OutputP $1 $4 }
       | new var in Proc                                                 { RestrictP $2 stypePlaceholder $4 }
       | match Exp '{' zero '->' Proc ';' succ '(' var ')' '->' Proc '}' { MatchNatP $2 $6 $10 $13 }

@@ -11,6 +11,7 @@ import Data.Map as Map
 import Parser (parse, addFreshTypeVars)
 import Lexer (tokenize)
 import System.Environment
+import System.IO
 
 
 main :: IO ()
@@ -19,12 +20,15 @@ main = do
   case args of
     [filePath] -> do
       s <- readFile filePath
-      case tokenize s >>= parse of
-        Nothing -> putStrLn "parse error"
-        Just process -> do
-          let process' = addFreshTypeVars process
-          print process'
-          inferBound 1 (Set.empty, Set.empty) Map.empty process' >>= print
+      case tokenize s of
+        Nothing -> putStrLn "lexing error"
+        Just tokens ->
+          case parse tokens of
+            Nothing -> putStrLn "parse error"
+            Just process -> do
+              let process' = addFreshTypeVars process
+              print process'
+              inferBound 1 (Set.empty, Set.empty) Map.empty process' >>= print
     _ -> putStrLn "invalid invocation; must be called with a filepath"
 
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print

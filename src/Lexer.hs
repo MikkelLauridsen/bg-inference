@@ -56,7 +56,7 @@ tokenize = aux False
         aux False ('}':s) = aux False s >>= (\tokens -> return $ CurlyRT : tokens)
         aux False (';':s) = aux False s >>= (\tokens -> return $ SemiT : tokens)
         aux False ('-':'>':s) = aux False s >>= (\tokens -> return $ ArrowT : tokens)
-        aux False s@(c:_) | isDigit c = aux False (dropWhile isSpace s) >>= (\tokens -> return $ (NatT $ (read :: String -> Int) (takeWhile isSpace s)) : tokens)
+        aux False s@(c:_) | isDigit c = aux False (dropWhile isDigit s) >>= (\tokens -> return $ (NatT $ (read :: String -> Int) (takeWhile isDigit s)) : tokens)
         aux False s@(c:_) | isLetter c = do
             let prefix = takeWhile isLetter s
             let s' = dropWhile isLetter s
