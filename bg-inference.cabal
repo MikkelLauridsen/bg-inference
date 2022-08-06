@@ -66,6 +66,7 @@ executable bg-inference-exe
     , containers
     , bg-inference
   default-language: Haskell2010
+  build-tools: happy
 
 test-suite bg-inference-test
   type: exitcode-stdio-1.0
