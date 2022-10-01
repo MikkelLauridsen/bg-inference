@@ -1,0 +1,20 @@
+new seq in new seqSq in (
+    (
+        *seq?(n, r).match n 
+        {
+            zero -> r!();
+            succ(x) -> new rp in 
+                ( tick.seq!(x,rp) | rp?().r!() )
+        }
+    )
+    |
+    (
+        *seqSq?(n, r).match n
+        { 
+            zero -> r!(); 
+            succ(m) -> new rp in 
+                (seq!(m, rp) | rp?().seqSq!(m, r))
+        }
+    )
+    | (new r in ( seqSq!(9, r) | r?() ))
+)
