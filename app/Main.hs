@@ -12,6 +12,7 @@ import Parser (parse, addFreshTypeVars)
 import Lexer (tokenize)
 import System.Environment
 import System.IO
+import Checker (applyConstraintSubst)
 
 
 main :: IO ()
@@ -230,3 +231,6 @@ inferenceRunningExamplef' =
               ))
       )
       :|: RestrictP "r" tb4 (OutputP "npar" [natExp 10, VarE "r"] :|: InputP "r" [] NilP)
+
+
+
