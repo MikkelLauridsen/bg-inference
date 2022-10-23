@@ -17,16 +17,6 @@ type ConstraintSubst = (UseValuation, Map CoeffVar Integer)
 applyConstraintSubstList :: ConstraintSubst -> [TypeConstraint] -> [TypeConstraint]
 applyConstraintSubstList subst = Prelude.map (applyConstraintSubst subst) 
 
-
---data Coefficient 
---  = COEVar CoeffVar 
---  | COENumeral Integer
---  | COEAdd Coefficient Coefficient 
---  | COEMul Coefficient Coefficient 
---  | COESub Coefficient Coefficient
---  | COEDiv Coefficient Coefficient
---  deriving (Ord, Eq)
-
 applyConstraintSubstCoefficientConstraint :: ConstraintSubst -> CoefficientConstraint -> CoefficientConstraint
 applyConstraintSubstCoefficientConstraint subst (CCSEqual coeff1 coeff2) = CCSEqual coeff1' coeff2'
     where
