@@ -13,6 +13,7 @@ import Lexer (tokenize)
 import System.Environment
 import System.IO
 import Checker (applyConstraintSubst)
+import IndexConstraintSolving
 
 
 main :: IO ()

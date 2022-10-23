@@ -1,6 +1,7 @@
 module Checker(
   applyConstraintSubst
 , ConstraintSubst
+, applyConstraintSubstCoefficientConstraint
 ) where
 
 import Types
@@ -8,12 +9,36 @@ import Constraints
 import Data.Map as Map
 import Data.Set as Set
 import Index
+import IndexConstraintSolving (CoefficientConstraint(..))
 
 type ConstraintSubst = (UseValuation, Map CoeffVar Integer)
 
 
 applyConstraintSubstList :: ConstraintSubst -> [TypeConstraint] -> [TypeConstraint]
 applyConstraintSubstList subst = Prelude.map (applyConstraintSubst subst) 
+
+
+--data Coefficient 
+--  = COEVar CoeffVar 
+--  | COENumeral Integer
+--  | COEAdd Coefficient Coefficient 
+--  | COEMul Coefficient Coefficient 
+--  | COESub Coefficient Coefficient
+--  | COEDiv Coefficient Coefficient
+--  deriving (Ord, Eq)
+
+applyConstraintSubstCoefficientConstraint :: ConstraintSubst -> CoefficientConstraint -> CoefficientConstraint
+applyConstraintSubstCoefficientConstraint subst (CCSEqual coeff1 coeff2) = CCSEqual coeff1' coeff2'
+    where
+        coeff1' = applyConstraintSubstCoefficient subst coeff1
+        coeff2' = applyConstraintSubstCoefficient subst coeff2
+
+applyConstraintSubstCoefficientConstraint subst (CCSLessEq coeff1 coeff2) = CCSLessEq coeff1' coeff2'
+    where
+        coeff1' = applyConstraintSubstCoefficient subst coeff1
+        coeff2' = applyConstraintSubstCoefficient subst coeff2
+
+applyConstraintSubstCoefficientConstraint _ c = c
 
 
 applyConstraintSubst :: ConstraintSubst -> TypeConstraint -> TypeConstraint

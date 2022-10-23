@@ -1,6 +1,8 @@
 module IndexConstraintSolving
   ( solveIndexConstraints,
     positiveCoeff,
+    reduceIndexConstraints,
+    CoefficientConstraint(..)
   )
 where
 
