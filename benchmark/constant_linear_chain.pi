@@ -1,0 +1,11 @@
+new seq in (
+    (
+        *seq?(n, r).match n 
+        {
+            zero -> r!();
+            succ(x) -> new rp in 
+                ( tick.seq!(x,rp) | rp?().r!() )
+        }
+    ) 
+    | (new r in new r2 in ( r2?().seq!(10, r) | r?() | tick.tick.r2!() ))
+)
