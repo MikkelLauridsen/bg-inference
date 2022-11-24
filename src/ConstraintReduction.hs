@@ -1,7 +1,7 @@
 module ConstraintReduction 
 ( reduceTypeConstraints
 , solveUseConstraints
-, getPositiveCoeffVars
+, getSignedCoeffVars
 ) where
 
 import Free
@@ -105,21 +105,30 @@ satisfiesUC _ _ = True
 zeroIndex :: Set IndexVar -> Index
 zeroIndex vphi = Index (Map.fromList $ Prelude.zip (Set.toList vphi) (Prelude.map COENumeral [0, 0 ..]), COENumeral 0) 
 
-
-getPositiveCoeffVars :: Set IndexConstraint -> Set CoeffVar
-getPositiveCoeffVars = aux Set.empty
+getSignedCoeffVars :: Set IndexConstraint -> (Set CoeffVar, Set CoeffVar, Set CoeffVar)
+getSignedCoeffVars = aux (Set.empty, Set.empty, Set.empty)
     where
-        aux positiveCoeffVars ics 
-            | positiveCoeffVars `Set.union` positiveCoeffVars' /= positiveCoeffVars = aux (positiveCoeffVars `Set.union` positiveCoeffVars') ics
-            | otherwise = positiveCoeffVars
+        aux (positiveCoeffVars, nonPositiveCoeffVars, nonNegativeCoeffVars) ics 
+            | hasChanged = aux (positiveCoeffVars', nonPositiveCoeffVars', nonNegativeCoeffVars') ics
+            | otherwise = (positiveCoeffVars, nonPositiveCoeffVars, nonNegativeCoeffVars)
             where
-                positiveCoeffVars' = Set.foldr (Set.union . checkConstraint) Set.empty ics
+                hasChanged = positiveCoeffVars' /= positiveCoeffVars || nonPositiveCoeffVars' /= nonPositiveCoeffVars || nonNegativeCoeffVars' /= nonNegativeCoeffVars
 
-                checkConstraint (ICSEqual ix jx) = checkIndices ix jx `Set.union` checkIndices jx ix
-                checkConstraint (ICSLessEq _ ix jx) = checkIndices ix jx
-                checkConstraint _ = Set.empty
+                positiveCoeffVars' = Set.foldr (Set.union . checkConstraint checkCoefficientsForPositives) positiveCoeffVars ics
+                nonPositiveCoeffVars' = Set.foldr (Set.union . checkConstraint checkCoefficientsForNonPositives) nonPositiveCoeffVars ics
+                nonNegativeCoeffVars' = Set.foldr (Set.union . checkConstraint checkCoefficientsForNonNegatives) nonNegativeCoeffVars ics
 
-                checkIndices (Index (m, c)) (Index (m', c')) = Prelude.foldr (\(c1, c2) b -> b `Set.union` checkCoefficients c1 c2) (checkCoefficients c c') $ Prelude.zip (Map.elems m) (Map.elems m')  
+                checkConstraint checker (ICSEqual ix jx) = checkIndices checker ix jx `Set.union` checkIndices checker jx ix
+                checkConstraint checker (ICSLessEq _ ix jx) = checkIndices checker ix jx
+                checkConstraint checker _ = Set.empty
 
-                checkCoefficients c (COEVar alpha) | positiveCoeff positiveCoeffVars c = Set.singleton alpha
-                checkCoefficients _ _ = Set.empty
+                checkIndices checker (Index (m, c)) (Index (m', c')) = Prelude.foldr (\(c1, c2) b -> b `Set.union` checker c1 c2) (checker c c') $ Prelude.zip (Map.elems m) (Map.elems m')  
+
+                checkCoefficientsForPositives c (COEVar alpha) | positiveCoeff (positiveCoeffVars, nonPositiveCoeffVars, nonNegativeCoeffVars) c = Set.singleton alpha
+                checkCoefficientsForPositives _ _ = Set.empty
+
+                checkCoefficientsForNonPositives (COEVar alpha) c | nonpositiveCoeff (positiveCoeffVars, nonPositiveCoeffVars, nonNegativeCoeffVars) c = Set.singleton alpha
+                checkCoefficientsForNonPositives _ _ = Set.empty
+
+                checkCoefficientsForNonNegatives c (COEVar alpha) | nonnegativeCoeff (positiveCoeffVars, nonPositiveCoeffVars, nonNegativeCoeffVars) c = Set.singleton alpha
+                checkCoefficientsForNonNegatives _ _ = Set.empty

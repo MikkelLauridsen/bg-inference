@@ -26,10 +26,10 @@ inferBound ivarsPerServer env stenv p =
         Right (tenv, cs, kx) -> do
           let reducedConstraints = reduceTypeConstraints cs
           let (cs', _) = solveUseConstraints reducedConstraints
-          res <- solveIndexConstraints Set.empty (Set.toList cs') (Just kx)
+          res <- solveIndexConstraints (Set.empty, Set.empty, Set.empty) (Set.toList cs') (Just kx)
           case res of
             Left _ -> do
-              res' <- solveIndexConstraints (getPositiveCoeffVars cs') (Set.toList cs') (Just kx)
+              res' <- solveIndexConstraints (getSignedCoeffVars cs') (Set.toList cs') (Just kx)
               case res' of
                 Left serr -> return $ Left serr
                 Right substI -> return $ Right (applyISubst substI kx)
@@ -58,12 +58,12 @@ inferBoundVerbose ivarsPerServer env stenv p = do
           putStrLn $ showNL cs'
           putStrLn "Resulting use-variable valuation:"
           putStrLn $ show f
-          putStrLn "Resulting positive coefficient variables:"
-          putStrLn $ show (getPositiveCoeffVars cs')
-          res <- solveIndexConstraints Set.empty (Set.toList cs') (Just kx)
+          putStrLn "Resulting (positive, non-positive, non-negative) coefficient variables:"
+          putStrLn $ show (getSignedCoeffVars cs')
+          res <- solveIndexConstraints (Set.empty, Set.empty, Set.empty) (Set.toList cs') (Just kx)
           case res of
             Left _ -> do
-              res' <- solveIndexConstraints (getPositiveCoeffVars cs') (Set.toList cs') (Just kx)
+              res' <- solveIndexConstraints (getSignedCoeffVars cs') (Set.toList cs') (Just kx)
               case res' of
                 Left serr -> return $ Left serr
                 Right substI -> do 
