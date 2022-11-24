@@ -107,8 +107,8 @@ applyConstraintSubstCoefficient subst@(_, coeffMap) c =
                 _ -> COEVar coeffVar
 
         COEAdd c1 c2 -> COEAdd (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
-        COEMul c1 c2 -> COEAdd (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
-        COESub c1 c2 -> COEAdd (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
-        COEDiv c1 c2 -> COEAdd (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
+        COEMul c1 c2 -> COEMul (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
+        COESub c1 c2 -> COESub (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
+        COEDiv c1 c2 -> COEDiv (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
         _ -> c
 
