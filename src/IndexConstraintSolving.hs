@@ -125,12 +125,12 @@ coefficientToZ3 (COEMul c1 c2) = do
 coefficientToZ3 (COESub c1 c2) = do
   (z1, m1) <- coefficientToZ3 c1
   (z2, m2) <- coefficientToZ3 c2
-  optimizeAssert =<< mkNot =<< mkEq z2 =<< mkIntNum 0
   ast <- mkSub [z1, z2]
   return (ast, m1 ++ m2)
 coefficientToZ3 (COEDiv c1 c2) = do
   (z1, m1) <- coefficientToZ3 c1
   (z2, m2) <- coefficientToZ3 c2
+  optimizeAssert =<< mkNot =<< mkEq z2 =<< mkIntNum 0
   ast <- mkDiv z1 z2
   return (ast, m1 ++ m2)
 

@@ -7,7 +7,7 @@ new toyfib in (
             {
                 zero -> r!();
                 succ(p) -> new r1 in new r2 in 
-                    (toyfib!(m, r1) | toyfib!(p, r2) | r1?().r2?().r!())
+                    (toyfib!(p, r2) | toyfib!(m, r1) | r2?().r1?().r!())
             }
         }
     )

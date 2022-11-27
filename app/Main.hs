@@ -12,9 +12,6 @@ import Parser (parse, addFreshTypeVars)
 import Lexer (tokenize)
 import System.Environment
 import System.IO
-import Checker (applyConstraintSubst)
-import IndexConstraintSolving
-
 
 main :: IO ()
 main = do
@@ -31,6 +28,7 @@ main = do
               let process' = addFreshTypeVars process
               print process'
               inferBound 1 (Set.empty, Set.empty) Map.empty process' >>= print
+              --inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty process' >>= print
     _ -> putStrLn "invalid invocation; must be called with a filepath"
 
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
