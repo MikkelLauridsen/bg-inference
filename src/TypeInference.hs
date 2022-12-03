@@ -81,7 +81,7 @@ freshType vphi (STChannel sts) = do
 
 freshType vphi (STServ is sts) = do
     gamma <- freshCapabVar
-    ix <- freshTemplate vphi
+    ix <- freshTemplate $ vphi `Set.difference` is
     kx <- freshTemplate $ vphi `Set.union` is
     s <- get
     (ts, _) <- Prelude.foldr freshMessageType (return ([], Set.toList is)) sts
@@ -170,7 +170,9 @@ inferExp env@(vphi, _) senv (VarE v) =
             return (Map.singleton v t, t)
         _ -> fail $ "name '" ++ show v ++ "' is free"
     where
-        assertSizeConstraints (TNat _ jx) = assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex jx)
+        assertSizeConstraints (TNat ix jx) = do 
+            assertConstraint $ TCSUse (USCIndex (ICSEqual zeroIndex ix))
+            assertConstraint $ TCSUse (USCConditionalInequality [] env ix jx)
         
         assertSizeConstraints (TChannel _ _ ts) = forM_ ts assertSizeConstraints
         assertSizeConstraints (TServ _ _ _ _ ts) = forM_ ts assertSizeConstraints

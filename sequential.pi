@@ -1,0 +1,10 @@
+new f in (
+    (
+        *f?(n).tick.match n 
+        {
+            zero -> nil;
+            succ(x) -> f!(x)
+        }
+    ) 
+    | f!(10)
+)
