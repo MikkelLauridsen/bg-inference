@@ -46,6 +46,7 @@ data Type
   = TNat Index Index
   | TChannel UseCapability Index [Type]
   | TServ Index (Set IndexVar) UseCapability Index [Type]
+  | TInvar (Set IndexVar) UseCapability Index [Type]
   deriving (Ord, Eq)
 
 substituteSimpleTypes :: SimpleType -> SimpleTypeSubstitution -> SimpleType

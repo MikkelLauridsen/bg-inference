@@ -1,0 +1,7 @@
+new seq in new a in (
+    (
+        *a?().tick.nil |
+        *seq?().tick.a!()
+    ) 
+    | seq!()
+)
