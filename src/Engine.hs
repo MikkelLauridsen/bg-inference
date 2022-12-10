@@ -14,6 +14,8 @@ import Inference
 import PiCalculus
 import TypeInference
 import Types
+import Checker (applyConstraintSubst, applyConstraintSubstIndexConstraint, applyConstraintSubstCoefficientConstraint)
+import LatexPrinting
 
 inferBound :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
 inferBound ivarsPerServer env stenv p =
@@ -66,23 +68,9 @@ inferBoundVerbose ivarsPerServer env stenv p = do
               res' <- solveIndexConstraints (getSignedCoeffVars cs') (Set.toList cs') (Just kx)
               case res' of
                 Left serr -> return $ Left serr
-                Right substI -> do 
-                  putStrLn "Resulting coefficient variable substitution:"
-                  putStrLn $ show substI
-                  putStrLn "Resulting complexity bound:"
-                  putStrLn $ show (applyISubst substI kx)
-                  putStrLn "Resulting (APPLIED) type context:"
-                  putStrLn $ show (Map.map (applyUseValuation f . applyISubstType substI) tenv)
+                Right substI -> do
+                  printRes substI tenv kx f cs cs'
+                  putStrLn "Type environment:"
+                  putStrLn $ wrapGather $ show tenv
                   return $ Right (applyISubst substI kx)
-            Right substI -> do 
-              putStrLn "Resulting coefficient variable substitution:"
-              putStrLn $ show substI
-              putStrLn "Resulting complexity bound:"
-              putStrLn $ show (applyISubst substI kx)
-              putStrLn "Resulting (APPLIED) type context:"
-              putStrLn $ show (Map.map (applyUseValuation f . applyISubstType substI) tenv)
-              return $ Right (applyISubst substI kx)
-
-
-showNL :: Show a => Set a -> String
-showNL = Set.foldr (\el s -> show el ++ "\\\\ " ++ s) ""
+            Right substI -> printRes substI tenv kx f cs cs'

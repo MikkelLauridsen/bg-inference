@@ -2,6 +2,7 @@ module Checker(
   applyConstraintSubst
 , ConstraintSubst
 , applyConstraintSubstCoefficientConstraint
+, applyConstraintSubstIndexConstraint
 ) where
 
 import Types

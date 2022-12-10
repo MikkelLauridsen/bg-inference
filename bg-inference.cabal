@@ -41,6 +41,7 @@ library
       Lexer
       Parser
       Checker
+      LatexPrinting
   other-modules:
       Paths_bg_inference
   hs-source-dirs:
