@@ -31,6 +31,13 @@ zeroCoeff = COENumeral 0
 
 reduceIndexConstraints :: (Set CoeffVar, Set CoeffVar, Set CoeffVar) -> [IndexConstraint] -> [CoefficientConstraint]
 reduceIndexConstraints _ [] = []
+
+reduceIndexConstraints signedCoeffVars (ICSEqual (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r)
+  | Map.null ix1m && Map.null ix2m = CCSEqual ix1b ix2b : reduceIndexConstraints signedCoeffVars r
+
+reduceIndexConstraints signedCoeffVars (ICSLessEq (vphi, _) (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r)
+  | Set.null vphi = CCSLessEq ix1b ix2b : reduceIndexConstraints signedCoeffVars r
+
 reduceIndexConstraints signedCoeffVars (ICSEqual (Index (ix1m, ix1b)) (Index (ix2m, ix2b)) : r) =
   CCSEqual ix1b ix2b :
   Prelude.map (\k -> CCSEqual (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) (Map.keys ix1m `List.union` Map.keys ix2m)
