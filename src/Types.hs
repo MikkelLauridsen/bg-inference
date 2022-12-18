@@ -70,6 +70,8 @@ instance Show Type where
   show (TNat ix jx) = "\\texttt{Nat}[" ++ show ix ++ ", " ++ show jx ++ "]"
   show (TChannel sigma ix ts) = "\\texttt{ch}^{" ++ show sigma ++ "}_{" ++ show ix ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
   show (TServ ix is sigma kx ts) = "\\forall_{" ++ show ix ++ "}{" ++ intercalate ", " (Prelude.map show (Set.toList is)) ++ "}.\\texttt{serv}^{" ++ show sigma ++ "}_{" ++ show kx ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
+  show (TInvar is sigma kx ts) = "\\forall{" ++ intercalate ", " (Prelude.map show (Set.toList is)) ++ "}.\\texttt{invar}^{" ++ show sigma ++ "}_{" ++ show kx ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
+
 
 typeSubst :: Map IndexVar Index -> Type -> Type
 typeSubst subst (TNat ix jx) = TNat (indexSubst ix subst) (indexSubst jx subst)
