@@ -20,12 +20,12 @@ import Debug.Trace (trace)
 import Index
 import Z3.Monad
 
-data CoefficientConstraint = CCSEqual Coefficient Coefficient | CCSLessEq Coefficient Coefficient | CCSFalse
+data CoefficientConstraint = CCSEqual Coefficient Coefficient | CCSLessEq Coefficient Coefficient | CCSFalse deriving (Ord, Eq)
 
 instance Show CoefficientConstraint where
-  show (CCSEqual a b) = show a ++ " == " ++ show b
-  show (CCSLessEq a b) = show a ++ " <= " ++ show b
-  show CCSFalse = "false"
+  show (CCSEqual a b) = show a ++ " = " ++ show b
+  show (CCSLessEq a b) = show a ++ " \\leq " ++ show b
+  show CCSFalse = "\\texttt{false}"
 
 zeroCoeff = COENumeral 0
 
