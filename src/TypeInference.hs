@@ -144,10 +144,10 @@ delayEnvServ env@(vphi, _) ix = mapM $ \t ->
     case t of
         TServ _ is sigma kx ts -> do
             jx <- freshTemplate vphi
-            t' <- freshType vphi $ mkSimpleType t
+            TServ _ _ sigma' kx' ts' <- freshType vphi $ mkSimpleType t
             assertConstraint $ TCSUse (USCConditionalInequality [] env jx ix)
-            assertConstraint $ TCSConditionalSubsumption [] env t' $ TServ jx is sigma kx ts            
-            return t'
+            assertConstraint $ TCSConditionalSubsumption [] env (TServ jx is sigma' kx' ts') $ TServ jx is sigma kx ts            
+            return $ TServ jx is sigma' kx' ts'
 
         _ -> return t 
 
@@ -274,6 +274,7 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
                     assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t' t | (t, t') <- Prelude.zip ts ts']
                 _ -> return ()
             tenv'' <- delayEnvServ env ix tenv'
+            -- TODO: trace tenv'' and tenv';; let's see how server 'a' is 'mapped' (also trace the constraints added by delayEnvServ;; we should see a clear connection ..)
             return (tenv'' .: (a, TServ ix is gamma kx'' ts), kx') 
 
 
