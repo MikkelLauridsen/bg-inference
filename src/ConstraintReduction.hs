@@ -56,8 +56,8 @@ reduceTypeConstraints tcs = aux (tcs, Set.empty)
                                        [TCSConditionalSubsumption (UCCSSubset (UCSet (Set.singleton UCOut)) sigma' : cgammas) (vphi `Set.union` is, phi) s t | (t, s) <- Prelude.zip ts ss]
                                      ) 
                 ucs'' = Set.fromList [ USCConditional cgammas (UCCSSubset sigma' sigma), USCIndex (ICSEqual ix jx)
-                                     , USCConditionalInequality (UCCSSubset (UCSet (Set.singleton UCIn)) sigma' : cgammas) (vphi `Set.union` is, phi) kx kx'
-                                     , USCConditionalInequality (UCCSSubset (UCSet (Set.singleton UCOut)) sigma' : cgammas) (vphi `Set.union` is, phi) kx' kx
+                                     , USCConditionalInequality (UCCSSubset (UCSet (Set.singleton UCIn)) sigma' : cgammas) (vphi `Set.union` is, phi) kx' kx
+                                     , USCConditionalInequality (UCCSSubset (UCSet (Set.singleton UCOut)) sigma' : cgammas) (vphi `Set.union` is, phi) kx kx'
                                      ] 
 
         reduceTypeConstraint (TCSUse uc) (tcs', ucs') = (tcs', Set.insert uc ucs')
