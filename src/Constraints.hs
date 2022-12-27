@@ -40,12 +40,6 @@ data UseCapabilityConstraint -- c_gamma, UCCS = Use capability constraint
   = UCCSSubset UseCapability UseCapability
   deriving (Ord, Eq)
 
-
-data CompositeCoefficientConstraint
-  = CompositeCoefficientConstraint :/\: CompositeCoefficientConstraint
-  | CompositeCoefficientConstraint :\/: CompositeCoefficientConstraint
-  deriving (Ord, Eq)
-
 instance Show TypeConstraint where
 
   show (TCSEqual t s) = show t ++ " \\sim " ++ show s
