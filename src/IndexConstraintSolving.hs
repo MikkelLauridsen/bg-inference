@@ -20,14 +20,76 @@ import Debug.Trace (trace)
 import Index
 import Z3.Monad
 
-data CoefficientConstraint = CCSEqual Coefficient Coefficient | CCSLessEq Coefficient Coefficient | CCSFalse deriving (Ord, Eq)
+data CoefficientConstraint 
+  = CCSEqual Coefficient Coefficient 
+  | CCSLessEq Coefficient Coefficient
+  | CCSLess Coefficient Coefficient 
+  | CCSFalse 
+  deriving (Ord, Eq)
+
+data CompositeCoefficientConstraint
+  = CompositeCoefficientConstraint :/\: CompositeCoefficientConstraint
+  | CompositeCoefficientConstraint :\/: CompositeCoefficientConstraint
+  | CoeffConstraint CoefficientConstraint 
+  deriving (Ord, Eq)
 
 instance Show CoefficientConstraint where
   show (CCSEqual a b) = show a ++ " = " ++ show b
   show (CCSLessEq a b) = show a ++ " \\leq " ++ show b
+  show (CCSLess a b) = show a ++ " < " ++ show b
   show CCSFalse = "\\texttt{false}"
 
+instance Show CompositeCoefficientConstraint where
+  show (c1 :/\: c2) = show c1 ++ " \\land " ++ show c2
+  show (c1 :\/: c2) = show c1 ++ " \\lor " ++ show c2
+  show (CoeffConstraint c) = show c
+
+
 zeroCoeff = COENumeral 0
+oneCoeff = COENumeral 1
+
+zeroIndex :: Index
+zeroIndex = Index (Map.empty, COENumeral 0) 
+
+oneIndex :: Index
+oneIndex = Index (Map.empty, COENumeral 1) 
+
+
+makeComposite :: IndexConstraint -> CompositeCoefficientConstraint
+makeComposite ICSFalse = CoeffConstraint CCSFalse
+makeComposite (ICSEqual (Index (ix1m, ix1b)) (Index (ix2m, ix2b))) = Prelude.foldr (\k -> ((CoeffConstraint $ CCSEqual (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) :/\:)) (CoeffConstraint $ CCSEqual ix1b ix2b) (Map.keys ix1m `List.union` Map.keys ix2m)
+makeComposite (ICSLessEq (vphi, phi) ixI ixJ) | Set.size phi > 1 = Prelude.foldr (\c' -> (makeComposite (ICSLessEq (vphi, Set.singleton c') ixI ixJ) :\/:)) (makeComposite (ICSLessEq (vphi, Set.singleton c) ixI ixJ)) cs
+  where
+    c : cs = Set.toList phi
+
+makeComposite (ICSLessEq (_, phi) (Index (ix1m, ix1b)) (Index (ix2m, ix2b))) | Set.null phi = Prelude.foldr (\k -> ((CoeffConstraint $ CCSLessEq (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) :/\:)) (CoeffConstraint $ CCSLessEq ix1b ix2b) (Map.keys ix1m `List.union` Map.keys ix2m)
+makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroIndex && Set.size vphi == 1 =
+  ((CoeffConstraint $ CCSEqual alpha1 zeroCoeff) :/\: ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: ((CoeffConstraint $ CCSLessEq zeroCoeff c0)  :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1)))) 
+  :\/:
+  ((CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: ((CoeffConstraint $ CCSLessEq zeroCoeff alpha0) :\/: (CoeffConstraint $ CCSLessEq zeroCoeff c0)))
+  :\/:
+  ((CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLess alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub zeroCoeff alpha0) alpha1)))))
+  where
+    Index (cm, c0) = ix2 .- ix1
+    c1 = head $ Map.elems cm
+    IVCLessEq (Index (ix3m, alpha0)) jx = head $ Set.toList phi
+    alpha1 = head $ Map.elems ix3m
+
+makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIndex && Set.size vphi == 1 =
+  ((CoeffConstraint $ CCSEqual alpha1 zeroCoeff) :/\: ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: ((CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))))
+  :\/:
+  ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))
+  :\/:
+  ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub oneCoeff alpha0) alpha1)))))
+  where
+    Index (cm, c0) = ix2 .- ix1
+    c1 = head $ Map.elems cm
+    IVCLessEq ix (Index (ix3m, alpha0)) = head $ Set.toList phi
+    alpha1 = head $ Map.elems ix3m
+
+makeComposite _ = error "unsupported index constraint"
+
+
 
 reduceIndexConstraints :: (Set CoeffVar, Set CoeffVar, Set CoeffVar) -> [IndexConstraint] -> [CoefficientConstraint]
 reduceIndexConstraints _ [] = []
