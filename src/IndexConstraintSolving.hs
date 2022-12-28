@@ -63,7 +63,7 @@ makeComposite (ICSLessEq (vphi, phi) ixI ixJ) | Set.size phi > 1 = Prelude.foldr
     c : cs = Set.toList phi
 
 makeComposite (ICSLessEq (_, phi) (Index (ix1m, ix1b)) (Index (ix2m, ix2b))) | Set.null phi = Prelude.foldr (\k -> ((CoeffConstraint $ CCSLessEq (Map.findWithDefault zeroCoeff k ix1m) (Map.findWithDefault zeroCoeff k ix2m)) :/\:)) (CoeffConstraint $ CCSLessEq ix1b ix2b) (Map.keys ix1m `List.union` Map.keys ix2m)
-makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroIndex && Set.size vphi == 1 =
+makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroIndex && Set.size vphi == 1 && Map.size ix3m == 1 =
   ((CoeffConstraint $ CCSEqual alpha1 zeroCoeff) :/\: ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: ((CoeffConstraint $ CCSLessEq zeroCoeff c0)  :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1)))) 
   :\/:
   ((CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: ((CoeffConstraint $ CCSLessEq zeroCoeff alpha0) :\/: (CoeffConstraint $ CCSLessEq zeroCoeff c0)))
@@ -75,8 +75,8 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroI
     IVCLessEq (Index (ix3m, alpha0)) jx = head $ Set.toList phi
     alpha1 = head $ Map.elems ix3m
 
-makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIndex && Set.size vphi == 1 =
-  ((CoeffConstraint $ CCSEqual alpha1 zeroCoeff) :/\: ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: ((CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))))
+makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIndex && Set.size vphi == 1 && Map.size ix3m == 1 =
+  ((CoeffConstraint $ CCSEqual alpha1 zeroCoeff) :/\: ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :\/: ((CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))))
   :\/:
   ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))
   :\/:
@@ -86,6 +86,16 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIn
     c1 = head $ Map.elems cm
     IVCLessEq ix (Index (ix3m, alpha0)) = head $ Set.toList phi
     alpha1 = head $ Map.elems ix3m
+
+makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroIndex && Map.size ix3m == 0 =
+  (CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: makeComposite (ICSLessEq (vphi, Set.singleton) ix1 ix2)
+  where
+    IVCLessEq (Index (ix3m, alpha0)) jx = head $ Set.toList phi
+
+makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIndex && Map.size ix3m == 0 =
+  (CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :\/: makeComposite (ICSLessEq (vphi, Set.singleton) ix1 ix2)
+  where
+    IVCLessEq ix (Index (ix3m, alpha0)) = head $ Set.toList phi
 
 makeComposite _ = error "unsupported index constraint"
 
