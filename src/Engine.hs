@@ -63,7 +63,7 @@ inferBoundVerbose ivarsPerServer env stenv p = do
           putStrLn "Resulting (positive, non-positive, non-negative) coefficient variables:"
           putStrLn $ show (getSignedCoeffVars cs')
           putStrLn "Over-approximated coefficient constraints:"
-          putStrLn $ showNL (Set.fromList (reduceIndexConstraints (getSignedCoeffVars cs') (Set.toList cs')))
+          putStrLn $ showNL (Set.map makeComposite cs')
           res <- solveIndexConstraints (Set.empty, Set.empty, Set.empty) (Set.toList cs') (Just kx)
           case res of
             Left _ -> do

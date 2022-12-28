@@ -4,6 +4,7 @@ module IndexConstraintSolving
     nonnegativeCoeff,
     nonpositiveCoeff,
     reduceIndexConstraints,
+    makeComposite,
     CoefficientConstraint(..)
   )
 where
@@ -71,7 +72,10 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroI
   ((CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLess alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub zeroCoeff alpha0) alpha1)))))
   where
     Index (cm, c0) = ix2 .- ix1
-    c1 = head $ Map.elems cm
+    c1 =
+      case Map.elems cm of
+        c : _ -> c
+        _ -> zeroCoeff
     IVCLessEq (Index (ix3m, alpha0)) jx = head $ Set.toList phi
     alpha1 = head $ Map.elems ix3m
 
@@ -83,7 +87,10 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIn
   ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub oneCoeff alpha0) alpha1)))))
   where
     Index (cm, c0) = ix2 .- ix1
-    c1 = head $ Map.elems cm
+    c1 =
+      case Map.elems cm of
+        c : _ -> c
+        _ -> zeroCoeff
     IVCLessEq ix (Index (ix3m, alpha0)) = head $ Set.toList phi
     alpha1 = head $ Map.elems ix3m
 
@@ -128,9 +135,9 @@ solveIndexConstraints signedCoeffVars constraints mObjIndex = do
     Just (a, vars) -> return $ Left $ "Unknown error: Just (" ++ show a ++ ", " ++ show vars ++ ")"
     Nothing -> return $ Left "No solution"
   where
-    coefficientConstraints = reduceIndexConstraints signedCoeffVars constraints
+    coefficientConstraints = Prelude.map makeComposite constraints
     script = do
-      (asts, vMaps) <- mapM coefficientConstraintToZ3 coefficientConstraints <&> unzip
+      (asts, vMaps) <- mapM compositeCoefficientConstraintToZ3 coefficientConstraints <&> unzip
       let vMaps' = concat vMaps
       let (vars, varAsts) = unzip vMaps'
       mapM_ optimizeAssert asts
