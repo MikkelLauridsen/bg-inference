@@ -145,6 +145,21 @@ solveIndexConstraints signedCoeffVars constraints mObjIndex = do
           return $ Just (Sat, Map.fromList (zip vars mVals))
         a -> return $ Just (a, Map.empty)
 
+
+compositeCoefficientConstraintToZ3 :: CompositeCoefficientConstraint -> Z3 (AST, [(CoeffVar, AST)])
+compositeCoefficientConstraintToZ3 (CoeffConstraint cc) = coefficientConstraintToZ3 cc
+compositeCoefficientConstraintToZ3 (ccc1 :/\: ccc2) = do
+  (z1, m1) <- compositeCoefficientConstraintToZ3 ccc1
+  (z2, m2) <- compositeCoefficientConstraintToZ3 ccc2
+  ast <- mkAnd [z1, z2]
+  return (ast, m1 ++ m2)
+compositeCoefficientConstraintToZ3 (ccc1 :\/: ccc2) = do
+  (z1, m1) <- compositeCoefficientConstraintToZ3 ccc1
+  (z2, m2) <- compositeCoefficientConstraintToZ3 ccc2
+  ast <- mkOr [z1, z2]
+  return (ast, m1 ++ m2)
+
+
 coefficientConstraintToZ3 :: CoefficientConstraint -> Z3 (AST, [(CoeffVar, AST)])
 coefficientConstraintToZ3 (CCSEqual c1 c2) = do
   (z1, m1) <- coefficientToZ3 c1
@@ -155,6 +170,11 @@ coefficientConstraintToZ3 (CCSLessEq c1 c2) = do
   (z1, m1) <- coefficientToZ3 c1
   (z2, m2) <- coefficientToZ3 c2
   ast <- mkLe z1 z2
+  return (ast, m1 ++ m2)
+coefficientConstraintToZ3 (CCSLess c1 c2) = do
+  (z1, m1) <- coefficientToZ3 c1
+  (z2, m2) <- coefficientToZ3 c2
+  ast <- mkLt z1 z2
   return (ast, m1 ++ m2)
 coefficientConstraintToZ3 CCSFalse = do
   ast <- mkFalse
