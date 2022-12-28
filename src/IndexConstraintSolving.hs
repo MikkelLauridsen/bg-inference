@@ -88,12 +88,12 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIn
     alpha1 = head $ Map.elems ix3m
 
 makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && jx == zeroIndex && Map.size ix3m == 0 =
-  (CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: makeComposite (ICSLessEq (vphi, Set.singleton) ix1 ix2)
+  (CoeffConstraint $ CCSLessEq oneCoeff alpha0) :\/: makeComposite (ICSLessEq (vphi, Set.empty) ix1 ix2)
   where
     IVCLessEq (Index (ix3m, alpha0)) jx = head $ Set.toList phi
 
 makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIndex && Map.size ix3m == 0 =
-  (CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :\/: makeComposite (ICSLessEq (vphi, Set.singleton) ix1 ix2)
+  (CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :\/: makeComposite (ICSLessEq (vphi, Set.empty) ix1 ix2)
   where
     IVCLessEq ix (Index (ix3m, alpha0)) = head $ Set.toList phi
 
