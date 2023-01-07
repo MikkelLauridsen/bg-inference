@@ -3,6 +3,7 @@ module Checker(
 , ConstraintSubst
 , applyConstraintSubstCoefficientConstraint
 , applyConstraintSubstIndexConstraint
+, applyConstraintSubstCompositeConstraint
 ) where
 
 import Types
@@ -10,7 +11,7 @@ import Constraints
 import Data.Map as Map
 import Data.Set as Set
 import Index
-import IndexConstraintSolving (CoefficientConstraint(..))
+import IndexConstraintSolving (CoefficientConstraint(..), CompositeCoefficientConstraint(..))
 
 type ConstraintSubst = (UseValuation, Map CoeffVar Integer)
 
@@ -113,3 +114,7 @@ applyConstraintSubstCoefficient subst@(_, coeffMap) c =
         COEDiv c1 c2 -> COEDiv (applyConstraintSubstCoefficient subst c1) (applyConstraintSubstCoefficient subst c2)
         _ -> c
 
+applyConstraintSubstCompositeConstraint :: ConstraintSubst -> CompositeCoefficientConstraint -> CompositeCoefficientConstraint
+applyConstraintSubstCompositeConstraint subst (cc1 :/\: cc2) = (applyConstraintSubstCompositeConstraint subst cc1) :/\: (applyConstraintSubstCompositeConstraint subst cc2)
+applyConstraintSubstCompositeConstraint subst (cc1 :\/: cc2) = (applyConstraintSubstCompositeConstraint subst cc1) :\/: (applyConstraintSubstCompositeConstraint subst cc2)
+applyConstraintSubstCompositeConstraint subst (CoeffConstraint c) = CoeffConstraint $ applyConstraintSubstCoefficientConstraint subst c

@@ -58,10 +58,10 @@ instance Show Coefficient where
 
   show (COEVar alpha) = show alpha
   show (COENumeral n) = show n
-  show (COEAdd c c') = "(" ++ show c ++ "+" ++ show c' ++ ")"
-  show (COEMul c c') = show c ++ show c'
-  show (COESub c c') = "(" ++ show c ++ "-" ++ show c' ++ ")"
-  show (COEDiv c c') = "(" ++ show c ++ ")/(" ++ show c' ++ ")" 
+  show (COEAdd c c') = "\\left(" ++ show c ++ "+" ++ show c' ++ "\\right)"
+  show (COEMul c c') = show c ++ "\\left(" ++ show c' ++ "\\right)"
+  show (COESub c c') = "\\left(" ++ show c ++ "-" ++ show c' ++ "\\right)"
+  show (COEDiv c c') = "\\left(" ++ show c ++ "\\right)/\\left(" ++ show c' ++ "\\right)" 
 
 
 instance Show Index where

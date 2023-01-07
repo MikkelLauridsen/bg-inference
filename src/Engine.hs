@@ -25,7 +25,7 @@ inferBound ivarsPerServer env stenv p =
       let p' = applySTVSubst substST p
       case inferTypes env stenv p' of
         Left serr -> return $ Left serr
-        Right (tenv, cs, kx) -> do
+        Right (tenv, cs, kx, _) -> do
           let reducedConstraints = reduceTypeConstraints cs
           let (cs', _) = solveUseConstraints reducedConstraints
           res <- solveIndexConstraints (Set.empty, Set.empty, Set.empty) (Set.toList cs') (Just kx)
@@ -49,7 +49,9 @@ inferBoundVerbose ivarsPerServer env stenv p = do
       let p' = applySTVSubst substST p
       case inferTypes env stenv p' of
         Left serr -> return $ Left serr
-        Right (tenv, cs, kx) -> do
+        Right (tenv, cs, kx, ap) -> do
+          putStrLn "Resulting annotated process:"
+          putStrLn $ showNL (Set.singleton ap)
           putStrLn "Inferred type-constraint satisfaction problem:"
           putStrLn $ showNL cs
           let reducedConstraints = reduceTypeConstraints cs

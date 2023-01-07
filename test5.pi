@@ -1,0 +1,4 @@
+new seq in *seq?(n).(match n {
+    zero -> nil;
+    succ(m) -> tick.nil
+} | seq!(10))

@@ -5,7 +5,8 @@ module IndexConstraintSolving
     nonpositiveCoeff,
     reduceIndexConstraints,
     makeComposite,
-    CoefficientConstraint(..)
+    CoefficientConstraint(..),
+    CompositeCoefficientConstraint(..)
   )
 where
 
@@ -41,8 +42,8 @@ instance Show CoefficientConstraint where
   show CCSFalse = "\\texttt{false}"
 
 instance Show CompositeCoefficientConstraint where
-  show (c1 :/\: c2) = show c1 ++ " \\land " ++ show c2
-  show (c1 :\/: c2) = show c1 ++ " \\lor " ++ show c2
+  show (c1 :/\: c2) = "\\left(" ++ show c1 ++ "\\right) \\land\\left(" ++ show c2 ++ "\\right) "
+  show (c1 :\/: c2) = "\\left(" ++ show c1 ++ "\\right) \\lor\\left(" ++ show c2 ++ "\\right) "
   show (CoeffConstraint c) = show c
 
 
@@ -84,7 +85,7 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIn
   :\/:
   ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))
   :\/:
-  ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub oneCoeff alpha0) alpha1)))))
+  ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub oneCoeff alpha0) alpha1)))))
   where
     Index (cm, c0) = ix2 .- ix1
     c1 =

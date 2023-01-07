@@ -9,6 +9,7 @@ import Data.Set as Set
 import Constraints
 import Checker
 import Types
+import IndexConstraintSolving
 
 printRes substI tenv kx f cs cs' = do
   putStrLn "Resulting coefficient variable substitution:"
@@ -21,8 +22,15 @@ printRes substI tenv kx f cs cs' = do
   putStrLn $ wrapGather $ show tenv
   putStrLn "Inferred type-constraint satisfaction problem (APPLIED):"
   putStrLn $ showNL $ Set.map (applyConstraintSubst (f, substI)) cs
+  putStrLn "Reduced index-constraint satisfaction problem:"
+  putStrLn $ showNL cs'
+  putStrLn "Over-approximated coefficient constraints:"
+  putStrLn $ showNLL (Prelude.map makeComposite $ Set.toList cs')
   putStrLn "Reduced index-constraint satisfaction problem (APPLIED):"
-  putStrLn $ showNL $ Set.map (applyConstraintSubstIndexConstraint (f, substI)) cs'
+  putStrLn $ showNLL $ Prelude.map (applyConstraintSubstIndexConstraint (f, substI)) (Set.toList cs')
+  putStrLn "Over-approximated coefficient constraints (APPLIED):"
+  putStrLn $ showNLL $ Prelude.map (applyConstraintSubstCompositeConstraint (f, substI)) (Prelude.map makeComposite $ Set.toList cs')
+  putStrLn "-----------------"
   return $ Right (applyISubst substI kx)
 
 --applyCoeffVarToTypeConstraint :: Map CoeffVar Integer -> TypeConstraint -> TypeConstraint
@@ -60,7 +68,7 @@ showNL' :: Show a => [a] -> String
 showNL' = Prelude.foldr (\el s -> show el ++ "\\\\ " ++ s) ""
 
 wrapGather :: String -> String
-wrapGather s = "\\begin{gather*}" ++ s ++ "\\end{gather*}"
+wrapGather s = "\\setcounter{equation}{0}\\begin{gather}" ++ s ++ "\\end{gather}\\newpage"
 
 showGather :: Show a => [a] -> String
 showGather s = wrapGather $ showNL' s
@@ -73,10 +81,13 @@ group n l
 
 showGathers :: Show a => [a] -> String
 showGathers elems = Prelude.foldr (\el s -> showGather el ++ "\n" ++ s) "" groups
-  where groups = group 30 elems
+  where groups = group 100000 elems
 
 showNL :: Show a => Set a -> String
 showNL = showGathers . Set.toList
+
+showNLL :: Show a => [a] -> String
+showNLL = showGathers
 
 showMap :: (Show k, Show v) => Map k v -> String
 showMap map = "(" ++ Prelude.foldr (\(k, v) s -> show k ++ ", " ++ show v ++ "),\\allowbreak " ++ s) "" (Map.toList map) ++ ")"
