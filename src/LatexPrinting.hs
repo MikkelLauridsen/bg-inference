@@ -68,7 +68,7 @@ showNL' :: Show a => [a] -> String
 showNL' = Prelude.foldr (\el s -> show el ++ "\\\\ " ++ s) ""
 
 wrapGather :: String -> String
-wrapGather s = "\\setcounter{equation}{0}\\begin{gather}" ++ s ++ "\\end{gather}\\newpage"
+wrapGather s = "\\begin{gather}" ++ s ++ "\\end{gather}"
 
 showGather :: Show a => [a] -> String
 showGather s = wrapGather $ showNL' s
@@ -80,8 +80,8 @@ group n l
   | otherwise = error "Negative or zero n"
 
 showGathers :: Show a => [a] -> String
-showGathers elems = Prelude.foldr (\el s -> showGather el ++ "\n" ++ s) "" groups
-  where groups = group 100000 elems
+showGathers elems = "\\setcounter{equation}{0} " ++ Prelude.foldr (\el s -> showGather el ++ "\n" ++ s) "" groups ++ "\\newpage "
+  where groups = group 49 elems
 
 showNL :: Show a => Set a -> String
 showNL = showGathers . Set.toList
