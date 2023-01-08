@@ -1,0 +1,10 @@
+new seq in (
+    (
+        *seq?(n).match n 
+        {
+            zero -> nil;
+            succ(x) -> tick.seq!(x) 
+        }
+    ) 
+    | (new r in  seq!(10) )
+)

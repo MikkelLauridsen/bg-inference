@@ -1,0 +1,5 @@
+new seq in 
+*seq?(r).tick.r!() 
+| 
+(new r in 
+new r2 in (seq!(r) | r?().seq!(r2)))
