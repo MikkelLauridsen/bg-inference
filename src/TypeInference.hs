@@ -68,7 +68,7 @@ freshTemplate vphi = do
 
 
 freshType :: Set IndexVar -> SimpleType -> Infer Type
-freshType vphi (STVar _) = fail "Simple type not instantiated"
+freshType vphi (STVar v) = return $ TVar v
 freshType vphi (STNat) = do
     jx <- freshTemplate vphi
     return $ TNat zeroIndex jx
