@@ -85,7 +85,7 @@ makeComposite (ICSLessEq (vphi, phi) ix1 ix2) | Set.size phi == 1 && ix == oneIn
   :\/:
   ((CoeffConstraint $ CCSLessEq oneCoeff alpha0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1))
   :\/:
-  ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq oneCoeff alpha1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c0) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub oneCoeff alpha0) alpha1)))))
+  ((CoeffConstraint $ CCSLessEq alpha0 zeroCoeff) :/\: (CoeffConstraint $ CCSLessEq oneCoeff alpha1)  :/\: (CoeffConstraint $ CCSLessEq zeroCoeff c1) :/\: (CoeffConstraint $ CCSLessEq zeroCoeff (COEAdd c0 (COEMul c1 (COEDiv (COESub oneCoeff alpha0) alpha1)))))
   where
     Index (cm, c0) = ix2 .- ix1
     c1 =
