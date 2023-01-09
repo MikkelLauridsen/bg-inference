@@ -33,9 +33,6 @@ printRes substI tenv kx f cs cs' = do
   putStrLn "-----------------"
   return $ Right (applyISubst substI kx)
 
---applyCoeffVarToTypeConstraint :: Map CoeffVar Integer -> TypeConstraint -> TypeConstraint
---applyCoeffVarToTypeConstraint subst (TCSEqual t1 t2) = TCSEqual (applyCoeffVarToType subst t1) (applyCoeffVarToType subst t2)
-
 
 applyCoeffVarToUseConstraint :: Map CoeffVar Integer -> UseConstraint -> UseConstraint
 applyCoeffVarToUseConstraint subst (USCConditionalInequality useCapConstraints env ix1 ix2)

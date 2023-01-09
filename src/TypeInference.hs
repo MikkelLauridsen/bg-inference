@@ -79,22 +79,6 @@ freshType vphi (STChannel sts) = do
     ts <- sequence $ Prelude.map (freshType vphi) sts
     return $ TChannel (UCVar gamma) ix ts
 
---freshType vphi (STServ is sts) = do
---    isTimeInvariant <- isTimeInvariantM
---    if isTimeInvariant
---        then do
---            gamma <- freshCapabVar
---            kx <- freshTemplate $ vphi `Set.union` is
---            s <- get
---            (ts, _) <- Prelude.foldr freshMessageType (return ([], Set.toList is)) sts
---            return $ TInvar is (UCVar gamma) kx ts
---        else do
---            gamma <- freshCapabVar
---            ix <- freshTemplate $ vphi `Set.difference` is
---            kx <- freshTemplate $ vphi `Set.union` is
---            s <- get
---            (ts, _) <- Prelude.foldr freshMessageType (return ([], Set.toList is)) sts
---            return $ TServ ix is (UCVar gamma) kx ts
 freshType vphi (STServ is sts) = do
     gamma <- freshCapabVar
     ix <- freshTemplate $ vphi `Set.difference` is
@@ -149,7 +133,7 @@ delay _ _ t = return t
 
 
 delayEnv :: IndexVarConstraintEnv -> Index -> TypeEnv -> Infer TypeEnv
-delayEnv env jx tenv = mapM (\(v, t) -> delay env jx t >>= (\t' -> return (v, t'))) (Map.assocs tenv) >>= (\assocs -> return $ Map.fromList assocs)
+delayEnv env jx tenv = mapM (\(v, t) -> delay env jx t >>= (\t' -> return (v, t'))) (Map.assocs tenv) >>= (return . Map.fromList)
 
 
 delayEnvServ :: IndexVarConstraintEnv -> Index -> TypeEnv -> Infer TypeEnv
@@ -280,8 +264,6 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
         Just st@(STServ is sts) -> do
             setTimeInvariance True
             (tenv, kx, ap) <- inferProc (vphi `Set.union` is, phi) (Map.fromList (Prelude.zip vs sts) `Map.union` senv) p
-            --(tenvInvar, kx) <- inferProc (vphi `Set.union` is, phi) (Map.fromList (Prelude.zip vs sts) `Map.union` senv) p
-            --let tenv = Map.map mapInvar tenvInvar
             setTimeInvariance False
             TServ ix _ gamma kx'' ts <- freshType vphi st
             kx' <- freshTemplate vphi
@@ -299,14 +281,10 @@ inferProc env@(vphi, phi) senv (RepInputP a vs p) =
                     assertConstraints $ Set.fromList [TCSConditionalSubsumption [] (vphi `Set.union` is, phi) t' t | (t, t') <- Prelude.zip ts ts']
                 _ -> return ()
             tenv'' <- delayEnvServ env ix tenv'
-            -- TODO: trace tenv'' and tenv';; let's see how server 'a' is 'mapped' (also trace the constraints added by delayEnvServ;; we should see a clear connection ..)
             return (tenv'' .: (a, TServ ix is gamma kx'' ts), kx', RepInputAP a (Prelude.zip vs ts) ap) 
 
 
         _ -> fail "invalid simple type; Expected server type"
-    where
-        mapInvar (TInvar is gamma kx ts) = TServ zeroIndex is gamma kx ts
-        mapInvar t = t
 
 inferProc env@(vphi, _) senv (OutputP a es) = do
     (tenvs, ss) <- mapM (inferExp env senv) es >>= return . unzip
@@ -337,30 +315,6 @@ inferProc env@(vphi, _) senv (OutputP a es) = do
                 (assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex ix))
             tenv' <- delayEnv env ix $ Prelude.foldr Map.union Map.empty tenvs
             return (tenv' .: (a, TServ ix is gamma kx' ts), kx, OutputAP a es)
-            --tserv <- freshType vphi st
-            --case tserv of
-            --    TInvar is gamma kx' ts -> do
-            --        kx <- freshTemplate vphi
-            --        ss' <- mapM (freshType vphi) sts
-            --        let subst = instantiate (Set.toList is) ts ss' 
-            --        assertConstraints $ Set.fromList [TCSConditionalSubsumption [] env s s' | (s, s') <- Prelude.zip ss ss']
-            --        assertConstraints $ Set.fromList [TCSEqual s' (typeSubst subst t) | (s', t) <- Prelude.zip ss' ts]
-            --        assertConstraint $ TCSUse (USCConditionalInequality [] env (indexSubst kx' subst) kx)
-            --        assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCOut) gamma))
-            --        assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex kx')
-            --        return (Prelude.foldr Map.union Map.empty tenvs .: (a, TInvar is gamma kx' ts), kx)
-            --
-            --    TServ ix is gamma kx' ts -> do
-            --        kx <- freshTemplate vphi
-            --        ss' <- mapM (freshType vphi) sts
-            --        let subst = instantiate (Set.toList is) ts ss' 
-            --        assertConstraints $ Set.fromList [TCSConditionalSubsumption [] env s s' | (s, s') <- Prelude.zip ss ss']
-            --        assertConstraints $ Set.fromList [TCSEqual s' (typeSubst subst t) | (s', t) <- Prelude.zip ss' ts]
-            --        assertConstraint $ TCSUse (USCConditionalInequality [] env (ix .+ indexSubst kx' subst) kx)
-            --        assertConstraint $ TCSUse (USCConditional [] (UCCSSubset (UCSet $ Set.singleton UCOut) gamma))
-            --        assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex kx')
-            --        assertConstraint $ TCSUse (USCConditionalInequality [] env zeroIndex ix)
-            --        return ((delayEnv ix $ Prelude.foldr Map.union Map.empty tenvs) .: (a, TServ ix is gamma kx' ts), kx)
         
         _ -> fail "invalid simple type; Expected channel type or server type"
 

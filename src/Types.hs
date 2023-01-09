@@ -46,7 +46,6 @@ data Type
   = TNat Index Index
   | TChannel UseCapability Index [Type]
   | TServ Index (Set IndexVar) UseCapability Index [Type]
-  | TInvar (Set IndexVar) UseCapability Index [Type]
   | TVar TypeVar -- for bound variables that are not used by a process
   deriving (Ord, Eq)
 
@@ -71,7 +70,6 @@ instance Show Type where
   show (TNat ix jx) = "\\texttt{Nat}[" ++ show ix ++ ", " ++ show jx ++ "]"
   show (TChannel sigma ix ts) = "\\texttt{ch}^{" ++ show sigma ++ "}_{" ++ show ix ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
   show (TServ ix is sigma kx ts) = "\\forall_{" ++ show ix ++ "}{" ++ intercalate ", " (Prelude.map show (Set.toList is)) ++ "}.\\texttt{serv}^{" ++ show sigma ++ "}_{" ++ show kx ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
-  show (TInvar is sigma kx ts) = "\\forall{" ++ intercalate ", " (Prelude.map show (Set.toList is)) ++ "}.\\texttt{invar}^{" ++ show sigma ++ "}_{" ++ show kx ++ "}(" ++ intercalate ", " (Prelude.map show ts) ++ ")"
   show (TVar b) = "\\beta_{" ++ show b ++ "}"
 
 
