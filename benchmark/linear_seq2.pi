@@ -1,0 +1,15 @@
+new seq in new seq2 in (
+    (
+        *seq?(n, r).match n 
+        {
+            zero -> r!();
+            succ(x) -> new rp in 
+                ( tick.seq!(x,rp) | rp?().r!() )
+        }
+    )
+    |
+    (
+        *seq2?(n1, n2, ch).(new ch1 in (seq!(n1, ch1) | ch1?().seq!(n2, ch)))
+    )
+    | (new r in ( seq2!(12, 5, r) | r?() ))
+)
