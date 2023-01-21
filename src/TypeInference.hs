@@ -125,7 +125,7 @@ delay _ jx (TChannel sigma ix ts) = return $ TChannel sigma (ix .+ jx) ts
 delay env@(vphi, _) jx (TServ ix is sigma kx ts) = do
     jx' <- freshTemplate vphi
     assertConstraint $ TCSUse (USCConditionalInequality [] env jx' (ix .+ jx)) 
-    assertConstraint $ TCSUse (USCConditionalInequality [UCCSSubset sigma $ UCSet (Set.singleton UCIn)] env (ix .+ jx) jx')
+    assertConstraint $ TCSUse (USCConditionalInequality [UCCSSubset (UCSet (Set.singleton UCIn)) sigma] env (ix .+ jx) jx')
     assertConstraint $ TCSUse (USCConditionalInequality [] env ix jx')
     return $ TServ jx' is sigma kx ts
 
