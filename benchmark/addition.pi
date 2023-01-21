@@ -1,0 +1,10 @@
+new add in (
+    (
+        *add?(a, b, ch).tick.match a
+        {
+            zero -> ch!(b);
+            succ(a2) -> add!(a2, succ(b), ch)
+        }
+    )
+    | (new ch in (add!(4, 5, ch) | ch?(res)))
+)

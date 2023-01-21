@@ -182,6 +182,7 @@ inferExp env@(vphi, _) senv (VarE v) =
         
         assertSizeConstraints (TChannel _ _ ts) = forM_ ts assertSizeConstraints
         assertSizeConstraints (TServ _ _ _ _ ts) = forM_ ts assertSizeConstraints
+        assertSizeConstraints (TVar _) = return () -- variables of type TVar are not used by the process, so no constraints should be added
 
 inferExp env@(vphi, _) senv e@(SuccE _) = do
     let (n, e') = collectSuccessors e
