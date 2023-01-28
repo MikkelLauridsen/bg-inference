@@ -1,0 +1,9 @@
+new identity in new spawn in new wrapper in (
+    *identity?(v, r).r!(v)
+    |
+    *spawn?().(spawn!() | tick)
+    |
+    wrapper?().spawn!()
+    |
+    (new r2 in (identity!(wrapper, r2) | r2!()))
+)

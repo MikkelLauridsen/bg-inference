@@ -1,0 +1,12 @@
+new toyfib in
+    *toyfib?(n).tick.match n 
+    {
+        zero -> nil;
+        succ(m) -> match m 
+        {
+            zero -> nil;
+            succ(p) -> new r1 in 
+                (toyfib!(p) | toyfib!(m))
+        }
+    }
+    | toyfib!(20)

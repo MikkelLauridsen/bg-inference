@@ -1,0 +1,7 @@
+new par in 
+    *par?(n).match n 
+    {
+        zero -> nil;
+        succ(x) -> (par!(x) | tick)
+    }
+    | par!(10)

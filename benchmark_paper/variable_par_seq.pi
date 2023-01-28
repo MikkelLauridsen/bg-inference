@@ -1,0 +1,13 @@
+new seq in new parSeq in 
+    *seq?(n).match n 
+    {
+        zero -> nil;
+        succ(x) -> tick.seq!(x) 
+    }
+    |
+    *parSeq?(parN, seqN).match parN
+    {
+        zero -> nil;
+        succ(x) -> (parSeq!(x, seqN) | seq!(seqN))
+    }
+    | parSeq!(10, 1)

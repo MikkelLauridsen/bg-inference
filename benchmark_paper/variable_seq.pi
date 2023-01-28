@@ -1,0 +1,7 @@
+new seq in 
+    *seq?(n).match n 
+    {
+        zero -> nil;
+        succ(x) -> tick.seq!(x) 
+    }
+    | seq!(10)

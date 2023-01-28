@@ -1,0 +1,7 @@
+new identity in new constseq in (
+    *identity?(v, r).r!(v)
+    |
+    constseq?().tick.tick.tick
+    |
+    (new r2 in (identity!(constseq, r2) | r2!()))
+)

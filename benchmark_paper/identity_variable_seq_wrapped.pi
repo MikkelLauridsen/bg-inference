@@ -1,0 +1,12 @@
+new identity in new seq in new wrapper in
+    *identity?(v, r).r!(v)
+    |
+    *seq?(n).match n 
+    {
+        zero -> nil;
+        succ(x) -> tick.seq!(x) 
+    }
+    |
+    wrapper?(n).seq!(n)
+    |
+    new r2 in (identity!(wrapper, r2) | r2!(10))

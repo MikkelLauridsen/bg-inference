@@ -1,0 +1,4 @@
+new spawn in 
+    *spawn?().(spawn!() | tick)
+    |
+    spawn!()
