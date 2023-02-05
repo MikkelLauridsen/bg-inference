@@ -12,6 +12,7 @@ import Parser (parse, addFreshTypeVars)
 import Lexer (tokenize)
 import System.Environment
 import System.IO
+import System.Clock
 
 main :: IO ()
 main = do
@@ -27,8 +28,14 @@ main = do
             Just process -> do
               let process' = addFreshTypeVars process
               print process'
-              --inferBound 1 (Set.empty, Set.empty) Map.empty process' >>= print
-              inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty process' >>= print
+              start <- getTime Monotonic
+              --result <- inferBound 1 (Set.empty, Set.empty) Map.empty process'
+              result <- inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty process'
+              end <- getTime Monotonic
+              print result
+              let timediff = diffTimeSpec start end
+              putStrLn $ "Time (ns): " ++ show (toNanoSecs timediff)
+              putStrLn $ "Time (ms): " ++ show (fromIntegral (toNanoSecs timediff) / 1000000)
     _ -> putStrLn "invalid invocation; must be called with a filepath"
 
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
