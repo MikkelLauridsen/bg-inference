@@ -1,6 +1,6 @@
-module LatexPrinting 
+module LatexPrinting
 (
-  showNL, wrapGather, printRes
+  showNL, wrapGather, printRes, showMap, showMapMultiLine
 )
 where
 import Index
@@ -11,7 +11,7 @@ import Checker
 import Types
 import IndexConstraintSolving
 
-printRes substI tenv kx f cs cs' = do
+printRes substI tenv kx f cs cs' globalTypes = do
   putStrLn "Resulting coefficient variable substitution:"
   putStrLn $ wrapGather $ showMap substI
   putStrLn "Resulting complexity bound:"
@@ -30,6 +30,8 @@ printRes substI tenv kx f cs cs' = do
   putStrLn $ showNLL $ Prelude.map (applyConstraintSubstIndexConstraint (f, substI)) (Set.toList cs')
   putStrLn "Over-approximated coefficient constraints (APPLIED):"
   putStrLn $ showNLL $ Prelude.map (applyConstraintSubstCompositeConstraint (f, substI)) (Prelude.map makeComposite $ Set.toList cs')
+  putStrLn "Global types:"
+  putStrLn $ wrapGather $ showMapMultiLine (Map.map (applyISubstType substI) globalTypes)
   putStrLn "-----------------"
   return $ Right (applyISubst substI kx)
 
@@ -52,7 +54,7 @@ applyCoeffVarSubstToCoefficient subst (COEMul c1 c2) = COEMul (applyCoeffVarSubs
 applyCoeffVarSubstToCoefficient subst (COEDiv c1 c2) = COEDiv (applyCoeffVarSubstToCoefficient subst c1) (applyCoeffVarSubstToCoefficient subst c2)
 
 applyCoeffVarSubstToIndex :: Map CoeffVar Integer -> Index -> Index
-applyCoeffVarSubstToIndex subst (Index (map, bias)) = 
+applyCoeffVarSubstToIndex subst (Index (map, bias)) =
   Index (Map.map (applyCoeffVarSubstToCoefficient subst) map, applyCoeffVarSubstToCoefficient subst bias)
 
 applyCoeffVarSubstToIndexConstraint :: Map CoeffVar Integer -> IndexConstraint -> IndexConstraint
@@ -87,7 +89,12 @@ showNLL :: Show a => [a] -> String
 showNLL = showGathers
 
 showMap :: (Show k, Show v) => Map k v -> String
-showMap map = "(" ++ Prelude.foldr (\(k, v) s -> show k ++ ", " ++ show v ++ "),\\allowbreak " ++ s) "" (Map.toList map) ++ ")"
+showMap map = "(" ++ Prelude.foldr (\(k, v) s -> show k ++ ", " ++ show v ++ "),\\newline " ++ s) "" (Map.toList map) ++ ")"
+
+showMapMultiLine :: (Show k, Show v) => Map k v -> String
+showMapMultiLine map = concatMap showKVPair (Map.toList map)
+  where
+    showKVPair (k, v) = wrapGather ("(" ++ show k ++ ", " ++ show v ++ ")") ++ "\\\\"
 
 showSet :: Show a => Set a -> String
 showSet set = "{" ++ Prelude.foldr (\el s -> show el ++ ",\\allowbreak " ++ s) "" (Set.toList set) ++ "}"

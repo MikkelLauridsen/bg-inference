@@ -1,0 +1,7 @@
+new seqr in 
+    *seqr?(n, r).match n 
+    {
+        zero -> r!();
+        succ(x) -> tick.seqr!(x, r) 
+    }
+    | new r in (seqr!(10, r) | r?())

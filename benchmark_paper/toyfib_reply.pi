@@ -1,0 +1,12 @@
+new fibr in
+    *fibr?(n, r).tick.match n 
+    {
+        zero -> r!();
+        succ(m) -> match m 
+        {
+            zero -> r!();
+            succ(p) -> new r1 in new r2 in 
+                (fibr!(p, r2) | fibr!(m, r1) | r2?().r1?().r!())
+        }
+    }
+    | new r in (fibr!(20,r) | r?())

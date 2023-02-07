@@ -23,7 +23,8 @@ data InferState = InferState
   { nextCapabVar :: Int,
     nextCoeffVar :: Int,
     typeConstraints :: Set TypeConstraint,
-    isTimeInvariant :: Bool
+    isTimeInvariant :: Bool,
+    variableTypes :: TypeEnv
   }
 
 type Infer a = StateT InferState (Either (InferState, String)) a
@@ -36,7 +37,7 @@ type SimpleEnv = Map Var SimpleType
 type TypeEnv = Map Var Type
 
 
-initState = InferState { nextCapabVar = 0, nextCoeffVar = 0, typeConstraints = Set.empty, isTimeInvariant = False }
+initState = InferState { nextCapabVar = 0, nextCoeffVar = 0, typeConstraints = Set.empty, isTimeInvariant = False, variableTypes = Map.empty }
 
 
 (.:) :: (Ord k) => Map k v -> (k, v) -> Map k v
@@ -153,13 +154,21 @@ mkSimpleType :: Type -> SimpleType
 mkSimpleType (TNat _ _) = STNat
 mkSimpleType (TChannel _ _ ts) = STChannel $ Prelude.map mkSimpleType ts
 mkSimpleType (TServ _ is _ _ ts) = STServ is $ Prelude.map mkSimpleType ts
+mkSimpleType (TVar tv) = STVar tv
 
 
-inferTypes :: IndexVarConstraintEnv -> SimpleEnv -> Proc -> Either String (TypeEnv, Set TypeConstraint, Index, AnnotatedProc)
+inferTypes :: IndexVarConstraintEnv -> SimpleEnv -> Proc -> Either String (TypeEnv, Set TypeConstraint, Index, AnnotatedProc, TypeEnv)
 inferTypes env senv p =
-    case runStateT (inferProc env senv p >>= \(tenv, kx, ap) -> assertConstraint (TCSUse (USCConditionalInequality [] env zeroIndex kx)) >> return (tenv, kx, ap)) initState of
+    case runStateT action initState of
         Left (_, serr) -> Left serr
-        Right ((tenv, kx, ap), s) -> Right (tenv, typeConstraints s, kx, ap)
+        Right ((tenv, kx, ap, types), s) -> Right (tenv, typeConstraints s, kx, ap, types)
+    where
+        action = do
+            (tenv, kx, ap) <- inferProc env senv p
+            types <- gets variableTypes
+            assertConstraint (TCSUse (USCConditionalInequality [] env zeroIndex kx))
+            return (tenv, kx, ap, types)
+
 
 
 inferExp :: IndexVarConstraintEnv -> SimpleEnv -> Exp -> Infer (TypeEnv, Type)
@@ -210,6 +219,7 @@ inferProc :: IndexVarConstraintEnv -> SimpleEnv -> Proc -> Infer (TypeEnv, Index
 inferProc env senv (RestrictP a st p) = do
     (tenv, kx, ap) <- inferProc env (senv .: (a, st)) p
     t <- mkAnnotation env tenv a st
+    modify (\s -> s{ variableTypes = Map.insert a t (variableTypes s) })
     return (Map.delete a tenv, kx, RestrictAP a t ap)
 
 inferProc env@(vphi, _) senv NilP = do

@@ -13,6 +13,7 @@ import Lexer (tokenize)
 import System.Environment
 import System.IO
 import System.Clock
+import Control.Monad
 
 main :: IO ()
 main = do
@@ -28,14 +29,12 @@ main = do
             Just process -> do
               let process' = addFreshTypeVars process
               print process'
-              start <- getTime Monotonic
-              --result <- inferBound 1 (Set.empty, Set.empty) Map.empty process'
-              result <- inferBoundVerbose 1 (Set.empty, Set.empty) Map.empty process'
-              end <- getTime Monotonic
-              print result
-              let timediff = diffTimeSpec start end
-              putStrLn $ "Time (ns): " ++ show (toNanoSecs timediff)
-              putStrLn $ "Time (ms): " ++ show (fromIntegral (toNanoSecs timediff) / 1000000)
+              let inferFunc = inferBound 1 (Set.empty, Set.empty) Map.empty process'
+              result <- inferFunc
+              time <- averageTime (Control.Monad.void inferFunc) 10
+              putStrLn $ "Result " ++ show result
+              putStrLn $ "Time (ns): " ++ show time
+              putStrLn $ "Time (ms): " ++ show (fromIntegral time / 1000000)
     _ -> putStrLn "invalid invocation; must be called with a filepath"
 
 --main = inferBoundVerbose 1 (Set.empty, Set.empty) (Map.singleton "add" $ STServ (Set.fromList [IndexVar 0, IndexVar 1]) [STNat, STNat, STChannel [STNat]]) addtest >>= print
@@ -58,7 +57,15 @@ main = do
 --  putStrLn $ "Inferred bound: " ++ show runningExmpRes2
 
 
-
+-- Runs a function n times and calculates their average running time in nanoseconds
+averageTime :: IO () -> Int -> IO Integer
+averageTime f n = do
+  times <- replicateM n $ do
+    start <- getTime Monotonic
+    f
+    end <- getTime Monotonic
+    return $ toNanoSecs $ diffTimeSpec start end
+  return $ sum times `div` fromIntegral n
 
 typeVars :: [TypeVar]
 typeVars = [0 ..]

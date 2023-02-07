@@ -17,7 +17,7 @@ import Types
 import Checker (applyConstraintSubst, applyConstraintSubstIndexConstraint, applyConstraintSubstCoefficientConstraint)
 import LatexPrinting
 
-inferBound :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
+inferBound :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String (Index, TypeEnv))
 inferBound ivarsPerServer env stenv p =
   case inferSimpleTypes ivarsPerServer False stenv p of -- TODO: extend with stenv
     Left serr -> return $ Left serr
@@ -25,7 +25,7 @@ inferBound ivarsPerServer env stenv p =
       let p' = applySTVSubst substST p
       case inferTypes env stenv p' of
         Left serr -> return $ Left serr
-        Right (tenv, cs, kx, _) -> do
+        Right (tenv, cs, kx, _, globalTypes) -> do
           let reducedConstraints = reduceTypeConstraints cs
           let (cs', _) = solveUseConstraints reducedConstraints
           res <- solveIndexConstraints (Set.empty, Set.empty, Set.empty) (Set.toList cs') (Just kx)
@@ -34,8 +34,8 @@ inferBound ivarsPerServer env stenv p =
               res' <- solveIndexConstraints (getSignedCoeffVars cs') (Set.toList cs') (Just kx)
               case res' of
                 Left serr -> return $ Left serr
-                Right substI -> return $ Right (applyISubst substI kx)
-            Right substI -> return $ Right (applyISubst substI kx)
+                Right substI -> return $ Right (applyISubst substI kx, Map.map (applyISubstType substI) globalTypes)
+            Right substI -> return $ Right (applyISubst substI kx, Map.map (applyISubstType substI) globalTypes)
 
 inferBoundVerbose :: Int -> IndexVarConstraintEnv -> SimpleEnv -> Proc -> IO (Either String Index)
 inferBoundVerbose ivarsPerServer env stenv p = do
@@ -49,7 +49,7 @@ inferBoundVerbose ivarsPerServer env stenv p = do
       let p' = applySTVSubst substST p
       case inferTypes env stenv p' of
         Left serr -> return $ Left serr
-        Right (tenv, cs, kx, ap) -> do
+        Right (tenv, cs, kx, ap, globalTypes) -> do
           putStrLn "Resulting annotated process:"
           putStrLn $ showNL (Set.singleton ap)
           putStrLn "Inferred type-constraint satisfaction problem:"
@@ -73,8 +73,8 @@ inferBoundVerbose ivarsPerServer env stenv p = do
               case res' of
                 Left serr -> return $ Left serr
                 Right substI -> do
-                  printRes substI tenv kx f cs cs'
+                  printRes substI tenv kx f cs cs' globalTypes
                   putStrLn "Type environment:"
                   putStrLn $ wrapGather $ show tenv
                   return $ Right (applyISubst substI kx)
-            Right substI -> printRes substI tenv kx f cs cs'
+            Right substI -> printRes substI tenv kx f cs cs' globalTypes
