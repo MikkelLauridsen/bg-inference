@@ -1,1 +1,3 @@
-tick.tick.tick
+new cseq in
+    *cseq?().tick.tick.tick
+    | cseq!()

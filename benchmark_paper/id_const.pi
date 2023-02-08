@@ -1,0 +1,7 @@
+new id in new cseq in (
+    *id?(v, r).r!(v)
+    |
+    cseq?(r2).tick.tick.tick.r2!()
+    |
+    (new res in new r3 in (id!(cseq, res) | res?(proc).proc!(r3) | r3?()))
+)

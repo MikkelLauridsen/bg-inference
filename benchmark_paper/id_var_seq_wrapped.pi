@@ -1,0 +1,12 @@
+new id in new seq in new wrapper in
+    *id?(v, r).r!(v)
+    |
+    *seq?(n, r2).match n 
+    {
+        zero -> r2!();
+        succ(x) -> tick.seq!(x, r2) 
+    }
+    |
+    wrapper?(n, r3).seq!(n, r3)
+    |
+    new res in new r4 in (id!(wrapper, res) | res?(proc).proc!(10, r4) | r4?())

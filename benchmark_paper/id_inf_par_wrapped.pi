@@ -1,0 +1,9 @@
+new id in new spawn in new wrapper in (
+    *id?(v, r).r!(v)
+    |
+    *spawn?().(spawn!() | tick)
+    |
+    wrapper?().spawn!()
+    |
+    (new res in (id!(wrapper, res) | res?(p).p!()))
+)
